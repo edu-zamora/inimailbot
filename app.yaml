@@ -1,0 +1,15 @@
+application: inimailbot
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: /_ah/mail/ankidroid_crashes_reports@inimailbot\.appspotmail\.com.*
+  script: receive_ankicrashes.py
+
+- url: /ankidroid_crashes/.*
+  script: report_ankicrashes.py
+
+inbound_services:
+- mail
+
