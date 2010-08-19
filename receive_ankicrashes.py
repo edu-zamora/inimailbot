@@ -74,10 +74,22 @@ class LogSenderHandler(InboundMailHandler):
 			logging.warning("Can't parse datetime from: '" + m.group(1) + m.group(3) + "'")
 			return (None, "parsing_failed")
 		try:
-			tz = timezone(m.group(2))
+			tzname = m.group(2)
+			tz = timezone(tzname)
 		except UnknownTimeZoneError:
-			logging.warning("Unknown timezone: '" + m.group(2) + "'")
-			return (None, "timezone_unknown")
+			# Alternative timezone formats
+			newtzname = re.sub(r"^(\w+[+-])0*(\d*):00$", r"\1\2", tzname)
+			newtzname = re.sub(r"^(GMT[+-]\d*)$", r"Etc/\1", newtzname)
+			newtzname = re.sub(r"^(EDT)$", r"EST5\1", newtzname)
+			newtzname = re.sub(r"^(CDT)$", r"CST6\1", newtzname)
+			newtzname = re.sub(r"^(MDT)$", r"MST7\1", newtzname)
+			newtzname = re.sub(r"^(PDT)$", r"PST8\1", newtzname)
+			logging.info("Changed timezone from '" + tzname + "' to '" + newtzname + "'")
+			try:
+				tz = timezone(newtzname)
+			except UnknownTimeZoneError:
+				logging.warning("Unknown timezone: '" + tzname + "'")
+				return (None, "timezone_unknown")
 		try:
 			tm = tz.localize(tm)
 		except (ValueError, NonExistentTimeError):
@@ -130,7 +142,6 @@ class LogSenderHandler(InboundMailHandler):
 		return (send_ts, crash_ts, signature, "")
 
 	def receive(self, mail_message):
-		logging.info("-----------------------")
 		logging.info("Message from: " + mail_message.sender)
 		logging.info("Subject: " + mail_message.subject)
 #		try:
