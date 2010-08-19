@@ -72,26 +72,27 @@ class LogSenderHandler(InboundMailHandler):
 		try:
 			tz = timezone(m.group(2))
 		except UnknownTimeZoneError:
-			logging.info("Unknown time zone: " + m.group(2) + "'")
+			logging.info("Unknown time zone: '" + m.group(2) + "'")
 			return None
 		try:
 			tm = tz.localize(tm)
 		except (ValueError, NonExistentTimeError):
 			logging.info("Error while localizing datetime '" + tm.strftime(r"%d/%m/%Y %H:%M:%S") + "' to '" + tz.zone + "'")
 			return None
+		logging.info("time: '" + tm.astimezone(pytz.utc).strftime(r"%d/%m/%Y %H:%M:%S %Z") + "'")
 		return tm.astimezone(pytz.utc)
 
 	def getCrashSignature(self, mail):
-		m = re.search(r"(.*com\.ichi2\.anki\..*)\n", mail)
+		m = re.search(r"(.*com\.ichi2\.anki\..*)<br>", mail)
 		if m and m.groups():
-			return re.sub(r"\$[0-9@]*", "", m.group(1))
+			return re.sub(r"\$[a-fA-F0-9@]*", "", m.group(1))
 		return ""
 
 	def parseSimpleValue(self, mail, key, op=" = "):
-		pattern = key + op + r"(.*)\n"
+		pattern = key + op + r"(.*)<br>"
 		m = re.search(pattern, mail)
 		if m and m.groups():
-			#logging.info(key + " = " + m.group(1))
+			logging.info(key + " = '" + m.group(1) + "'")
 			return m.group(1)
 		return ""
 
@@ -99,6 +100,20 @@ class LogSenderHandler(InboundMailHandler):
 		logging.info("-----------------------")
 		logging.info("Received a message from: " + mail_message.sender)
 		logging.info("Subject: " + mail_message.subject)
+		try:
+			body = mail_message.bodies('text/plain').next()[1].decode()
+			logging.info("Received body: '" + body + "'")
+		except StopIteration:
+			logging.info("Can't retrieve html body of mail")
+
+		try:
+			body = mail_message.bodies('text/html').next()[1].decode()
+		except StopIteration:
+			logging.info("Can't retrieve body of mail")
+			return
+		body = re.sub(r"<p>", "", body)
+		body = re.sub(r"</p>", "<br>", body)
+		logging.info("Received html body: '" + body + "'")
 		m = re.search("^Bug Report on (.*)$", mail_message.subject)
 		if (m is None) or m.groups() is None:
 			logging.info("Rejecting message due to unknown subject: " + mail_message.subject)
@@ -108,10 +123,6 @@ class LogSenderHandler(InboundMailHandler):
 			logging.info("Rejecting message due to wrong format of subject: " + mail_message.subject)
 			return
 		logging.info("Received on: " + utc_ts.strftime(r"%d/%m/%Y %H:%M:%S %Z"))
-		try:
-			body = mail_message.bodies('text/plain').next()[1].decode()
-		except StopIteration:
-			logging.info("Can't retrieve body of mail")
 		signature = self.getCrashSignature(body)
 		logging.info("Signature: " + signature)
 		if signature:
@@ -123,7 +134,7 @@ class LogSenderHandler(InboundMailHandler):
 				versionName = self.parseSimpleValue(body, "VersionName"),
 				crashSignature = signature,
 				email = db.Email(mail_message.sender),
-				crashedTime = self.parseUTCDateTime(self.parseSimpleValue(body, "Report Generated", ": ")),
+				crashTime = self.parseUTCDateTime(self.parseSimpleValue(body, "Report Generated", ": ")),
 				sendTime = utc_ts,
 				brand = self.parseSimpleValue(body, "Brand"),
 				model = self.parseSimpleValue(body, "Model"),
