@@ -156,7 +156,7 @@ class LogSenderHandler(InboundMailHandler):
 			return
 		body = re.sub(r"<p>", "", body)
 		body = re.sub(r"</p>", "<br>", body)
-#		logging.info("Received html body: '" + body + "'")
+#		logging.debug("Received html body: '" + body + "'")
 		(send_ts, crash_ts, signature, hospital_reason) = self.getMessageEssentials(mail_message.subject, body)
 
 		if hospital_reason:

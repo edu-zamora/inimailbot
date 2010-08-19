@@ -1,0 +1,17 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+	<head>
+		<title>AnkiDroid crash reports</title>
+		<link rel="stylesheet" type="text/css" href="/css/main.css">
+	</head>
+  <body>
+		<table>
+			<th><td>Title</td></th>
+
+			{% for cr in crashes_list %}
+			<tr><td>{{ cr.crashId }}</td></tr>
+			{% endfor %}
+		</table>
+  </body>
+</html>
+
