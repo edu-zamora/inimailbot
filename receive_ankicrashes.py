@@ -61,6 +61,17 @@ class CrashReport(db.Model):
 				self.bugKey = nb.put()
 			logging.debug("Linked to bug, new count: " + str(self.bugKey.count))
 			self.put()
+	def parseSimpleValue(self, key, op=" = "):
+		pattern = key + op + r"(.*)<br>"
+		m = re.search(pattern, self.report)
+		if m and m.groups():
+			logging.debug("Parsed simple value: '" + key + "' = '" + m.group(1) + "'")
+			return m.group(1)
+		return ""
+	def fixOSId(self):
+		self.androidOSId = self.parseSimpleValue("ID")
+		return self.androidOSId
+
 
 class LogSenderHandler(InboundMailHandler):
 	def parseUTCDateTime(self, dt_str):
@@ -176,7 +187,7 @@ class LogSenderHandler(InboundMailHandler):
 					model = self.parseSimpleValue(body, "Model"),
 					product = self.parseSimpleValue(body, "Product"),
 					device = self.parseSimpleValue(body, "Device"),
-					androidOSId = self.parseSimpleValue(body, "Board"),
+					androidOSId = self.parseSimpleValue(body, "ID"),
 					androidOSVersion = self.parseSimpleValue(body, "AndroidVersion"),
 					availableInternalMemory = long(self.parseSimpleValue(body, "AvailableInternalMemory")),
 					tags = self.parseSimpleValue(body, "Tags"),

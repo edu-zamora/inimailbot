@@ -1,6 +1,9 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 	<head>
+		<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Language" content="en-us" />
 		<title>AnkiDroid crash reports</title>
 		<link rel="stylesheet" type="text/css" href="/css/main.css">
 	</head>
@@ -9,21 +12,30 @@
 			<thead>
 				<tr>
 					<th>Title</th>
-					<th>Crash Time</th>
-					<th>AnkiDroid Version</th>
-					<th>Title</th>
-					<th>Title</th>
-					<th>Title</th>
+					<th title="Send Time">Crash Time</th>
+					<th title="Package Name">Version</th>
+					<th title="OS Id">Android</th>
+					<th>Brand</th>
+					<th>Model</th>
+					<th>Product</th>
+					<th>Device</th>
+					<th>Available Memory</th>
+					<th title="# of instances">Bug</th>
 				</tr>
 			</thead>
 			<tbody>
-
 				{% for cr in crashes_list %}
 				<tr class="{% if forloop.counter|divisibleby:2 %}even{% else %}odd{% endif %}">
-					<td>{{ cr.crashId }}</td>
-					<td>{{ cr.crashTime.strftime() }}</td>
-
-					<td>{{ cr.versionName }}</td>
+					<td><a href="/view_report?report_id={{ cr.id }}">{{ cr.crashId }}</a></td>
+					<td title="{{ cr.sendTime|date:"Y-m-d H:i:s T" }}">{{ cr.crashTime|date:"Y-m-d H:i:s T" }}</td>
+					<td title="{{ cr.packageName }}">{{ cr.versionName }}</td>
+					<td title="{{ cr.fixOSId }}">{{ cr.androidOSVersion }}</td>
+					<td>{{ cr.brand }}</td>
+					<td>{{ cr.model }}</td>
+					<td>{{ cr.product }}</td>
+					<td>{{ cr.device }}</td>
+					<td>{{ cr.availableInternalMemory }}</td>
+					<td><a href="/view_bug?bug={{ cr.bugKey.key.id }}" title="count = {{ cr.bugKey.count }}">{{ cr.bugKey.key.id }}</a>
 				</tr>
 				{% endfor %}
 			</tbody>

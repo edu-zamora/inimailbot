@@ -2,20 +2,25 @@ table {
 	border:1px solid #c5d5e5;
 	border-collapse: collapse;
 	width: 100%;
+	font-size: 12px;
 }
 
-thead th {
+thead, th {
 	background: none repeat scroll 0 0 #c5d5e5;
 	font-weight: bold;
-	text-align: left;
-	vertical-align: bottom;
 }
 
-td {
+tr {
+	text-align: left;
+	vertical-align: middle;
+	border: 1px solid #b0b0e0;
+}
+
+
+th, td {
 	margin: 0;
 	padding: 0.35em 1em 0.25em 0.35em;
-	border-bottom: 1px solid #c5d5e5;
-	border-top: 1px solid #c5d5e5;
+	border: 1px solid #b0b0e0;
 }
 
 tr.odd, td.odd {
