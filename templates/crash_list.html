@@ -6,11 +6,27 @@
 	</head>
   <body>
 		<table>
-			<th><td>Title</td></th>
+			<thead>
+				<tr>
+					<th>Title</th>
+					<th>Crash Time</th>
+					<th>AnkiDroid Version</th>
+					<th>Title</th>
+					<th>Title</th>
+					<th>Title</th>
+				</tr>
+			</thead>
+			<tbody>
 
-			{% for cr in crashes_list %}
-			<tr><td>{{ cr.crashId }}</td></tr>
-			{% endfor %}
+				{% for cr in crashes_list %}
+				<tr class="{% if forloop.counter|divisibleby:2 %}even{% else %}odd{% endif %}">
+					<td>{{ cr.crashId }}</td>
+					<td>{{ cr.crashTime.strftime() }}</td>
+
+					<td>{{ cr.versionName }}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
 		</table>
   </body>
 </html>
