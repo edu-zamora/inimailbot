@@ -68,10 +68,6 @@ class CrashReport(db.Model):
 			logging.debug("Parsed simple value: '" + key + "' = '" + m.group(1) + "'")
 			return m.group(1)
 		return ""
-	def fixOSId(self):
-		self.androidOSId = self.parseSimpleValue("ID")
-		return self.androidOSId
-
 
 class LogSenderHandler(InboundMailHandler):
 	def parseUTCDateTime(self, dt_str):
