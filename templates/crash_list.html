@@ -26,7 +26,7 @@
 			<tbody>
 				{% for cr in crashes_list %}
 				<tr class="{% if forloop.counter|divisibleby:2 %}even{% else %}odd{% endif %}">
-					<td><a href="/view_report?report_id={{ cr.id }}">{{ cr.crashId }}</a></td>
+					<td><a href="/view_crash?crash_id={{ cr.id }}">{{ cr.crashId }}</a></td>
 					<td title="{{ cr.sendTime|date:"Y-m-d H:i:s T" }}">{{ cr.crashTime|date:"Y-m-d H:i:s T" }}</td>
 					<td title="{{ cr.packageName }}">{{ cr.versionName }}</td>
 					<td title="{{ cr.fixOSId }}">{{ cr.androidOSVersion }}</td>
