@@ -1,17 +1,55 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 	<head>
 		<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
 		<meta http-equiv="Content-Language" content="en-us" />
-		<title>AnkiDroid crash reports</title>
+		<title>AnkiDroid Triage - Crashes report</title>
 		<link rel="stylesheet" type="text/css" href="/css/main.css">
 	</head>
-  <body>
+	<body>
+		<div class="title">Crashes report</div>
+		<br>
+		{% if hospitalized|gt:0 %}
+		<div id="hospital">There are currently <b>{{ hospitalized }}</b> crash report{{ hospitalized|pluralize }} in <a href="/ankidroid_triage/hospital">hospital</a> awaiting treatment</div>
+		<br>
+		{% endif %}
+
+		<div class="above_table">
+			<div class="prev_next">
+			{% if last_page|gt:0 %}
+				{% if page|gt:0 %}
+					{% if bug_id %}
+				<a href="/ankidroid_triage/report_crashes?bug_id={{ bug_id }}&page=0">&lt;&lt; First {{ page_size }}</a>
+				&nbsp;
+				<a href="/ankidroid_triage/report_crashes?bug_id={{ bug_id }}&page={{ page|sub:1 }}">&lt; Previous {{ page_size }}</a>
+					{% else %}
+				<a href="/ankidroid_triage/report_crashes?page=0">&lt;&lt; First {{ page_size }}</a>
+				&nbsp;
+				<a href="/ankidroid_triage/report_crashes?page={{ page|sub:1 }}">&lt; Previous {{ page_size }}</a>
+					{% endif %}
+				&nbsp;
+				{% endif %}
+				{% if page|lt:last_page %}
+					{% if bug_id %}
+				<a href="/ankidroid_triage/report_crashes?bug_id={{ bug_id }}&page={{ page|add:1 }}">Next {{ page_size }} &gt;</a>
+				&nbsp;
+				<a href="/ankidroid_triage/report_crashes?bug_id={{ bug_id }}&page={{ last_page }}">Last {{ total_results|sub:1|mod:page_size|add:1 }} &gt;&gt;</a>
+					{% else %}
+				<a href="/ankidroid_triage/report_crashes?page={{ page|add:1 }}">Next {{ page_size }} &gt;</a>
+				&nbsp;
+				<a href="/ankidroid_triage/report_crashes?page={{ last_page }}">Last {{ total_results|sub:1|mod:page_size|add:1 }} &gt;&gt;</a>
+					{% endif %}
+				{% endif %}
+			{% endif %}
+			</div>
+			<div class="total_found">Total found: {{ total_results }}</div>
+		</div>
+
 		<table>
 			<thead>
 				<tr>
-					<th>Title</th>
+					<th>Crash Title</th>
 					<th title="Send Time">Crash Time</th>
 					<th title="Package Name">Version</th>
 					<th title="OS Id">Android</th>
@@ -26,20 +64,20 @@
 			<tbody>
 				{% for cr in crashes_list %}
 				<tr class="{% if forloop.counter|divisibleby:2 %}even{% else %}odd{% endif %}">
-					<td><a href="/view_crash?crash_id={{ cr.id }}">{{ cr.crashId }}</a></td>
-					<td title="{{ cr.sendTime|date:"Y-m-d H:i:s T" }}">{{ cr.crashTime|date:"Y-m-d H:i:s T" }}</td>
-					<td title="{{ cr.packageName }}">{{ cr.versionName }}</td>
-					<td title="{{ cr.androidOSId }}">{{ cr.androidOSVersion }}</td>
+					<td><a href="/ankidroid_triage/view_crash?crash_id={{ cr.id }}">{{ cr.crashId }}</a></td>
+					<td title="Send on {{ cr.sendTime|date:"Y-m-d H:i:s T" }}">{{ cr.crashTime|date:"Y-m-d H:i:s T" }}</td>
+					<td title="Package: {{ cr.packageName }}">{{ cr.versionName }}</td>
+					<td title="Firmware: {{ cr.androidOSId }}">{{ cr.androidOSVersion }}</td>
 					<td>{{ cr.brand }}</td>
 					<td>{{ cr.model }}</td>
 					<td>{{ cr.product }}</td>
 					<td>{{ cr.device }}</td>
 					<td>{{ cr.availableInternalMemory }}</td>
-					<td><a href="/view_bug?bug={{ cr.bugKey.key.id }}" title="count = {{ cr.bugKey.count }}">{{ cr.bugKey.key.id }}</a>
+					<td><a href="/ankidroid_triage/view_bug?bug={{ cr.bugKey.key.id }}" title="count = {{ cr.bugKey.count }}">{{ cr.bugKey.key.id }}</a></td>
 				</tr>
 				{% endfor %}
 			</tbody>
 		</table>
-  </body>
+	</body>
 </html>
 
