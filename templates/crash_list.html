@@ -11,7 +11,7 @@
 		<div class="title">Crashes report</div>
 		<br>
 		{% if hospitalized|gt:0 %}
-		<div id="hospital">There are currently <b>{{ hospitalized }}</b> crash report{{ hospitalized|pluralize }} in <a href="/ankidroid_triage/hospital">hospital</a> awaiting treatment</div>
+		<div id="hospital">There {{ hospitalized|pluralize:"is,are" }} currently <b>{{ hospitalized }}</b> crash report{{ hospitalized|pluralize }} in <a href="/ankidroid_triage/hospital">hospital</a> awaiting treatment</div>
 		<br>
 		{% endif %}
 
