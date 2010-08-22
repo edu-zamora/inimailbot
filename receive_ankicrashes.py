@@ -167,6 +167,7 @@ class LogSenderHandler(InboundMailHandler):
 		(send_ts, crash_ts, signature, hospital_reason) = self.getMessageEssentials(mail_message.subject, body)
 
 		if hospital_reason:
+			logging.debug("Hospitalized body: '" + body)
 			cr = HospitalizedReport(crashId=mail_message.subject,
 					crashBody=body,
 					diagnosis=hospital_reason)
