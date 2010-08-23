@@ -1,4 +1,4 @@
-import os, sys, logging
+import os, sys, logging, re
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from google.appengine.dist import use_library
@@ -33,13 +33,15 @@ class ViewBug(webapp.RequestHandler):
 		if bug:
 			if "find_issue" in post_args:
 				# Scan for matching issue
+				pass
 			elif "save_issue" in post_args:
 				# Save the entered issue
 				issueName = self.request.get('issue')
 				if re.search(r"^[0-9]+$", issueName):
-					bug.issueName = issueName
+					bug.issueName = long(issueName)
 					bug.linked = True
 					bug.put()
+					logging.info("Saving issue - value: '" + issueName + "'")
 				else:
 					logging.warning("Saving issue - non numeric value: '" + issueName + "'")
 		else:
@@ -47,11 +49,6 @@ class ViewBug(webapp.RequestHandler):
 		template_values = {'bg': bug}
 		path = os.path.join(os.path.dirname(__file__), 'templates/bug_view.html')
 		self.response.out.write(template.render(path, template_values))
-
-
-		for a in args:
-			logging.info("args: " + a)#self.request.arguments())
-
 
 	def get(self):
 		bugId = self.request.get('bug_id')
