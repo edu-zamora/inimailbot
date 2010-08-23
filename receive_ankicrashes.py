@@ -14,16 +14,13 @@ class HospitalizedReport(db.Model):
 	crashBody = db.TextProperty()
 	diagnosis = db.StringProperty()
 
-class Issue(db.Model):
-	issueLink = db.LinkProperty()
-	fixed = db.BooleanProperty()
-
 class Bug(db.Model):
 	signature = db.StringProperty(required=True)
 	count = db.IntegerProperty(required=True)
 	lastIncident = db.DateTimeProperty()
 	linked = db.BooleanProperty()
 	issueName = db.IntegerProperty()
+	fixed = db.BooleanProperty()
 
 class CrashReport(db.Model):
 	email = db.EmailProperty(required=True)
