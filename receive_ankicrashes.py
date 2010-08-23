@@ -26,13 +26,14 @@ class Bug(db.Model):
 	issueName = db.IntegerProperty()
 
 class CrashReport(db.Model):
-	crashId = db.StringProperty(required=True)
-	packageName = db.StringProperty(required=True)
-	versionName = db.StringProperty(required=True)
-	crashSignature = db.StringProperty(required=True)
 	email = db.EmailProperty(required=True)
-	crashTime = db.DateTimeProperty(required=True)
-	sendTime = db.DateTimeProperty(required=True)
+	crashId = db.StringProperty(required=True)
+	report = db.TextProperty(required=True)
+	packageName = db.StringProperty()
+	versionName = db.StringProperty()
+	crashSignature = db.StringProperty()
+	crashTime = db.DateTimeProperty()
+	sendTime = db.DateTimeProperty()
 	brand = db.StringProperty()
 	model = db.StringProperty()
 	product = db.StringProperty()
@@ -41,36 +42,39 @@ class CrashReport(db.Model):
 	androidOSVersion = db.StringProperty()
 	availableInternalMemory = db.IntegerProperty()
 	tags = db.StringProperty()
-	report = db.TextProperty()
 	bugKey = db.ReferenceProperty(Bug)
-	def addToBug(self):
-		if not self.bugKey:
-			results = db.GqlQuery("SELECT * FROM Bug WHERE signature = :1", self.crashSignature)
-			bug = results.get()
-			if bug:
-				logging.debug("Found old bug")
+	def linkToBug(self):
+		results = db.GqlQuery("SELECT * FROM Bug WHERE signature = :1", self.crashSignature)
+		bug = results.get()
+		if bug:
+			logging.debug("Found existing bug")
+			if self.bugKey != bug.key():
+				logging.debug("Assigning to bug: %d" % bug.key().id())
+				oldbug = self.bugKey
 				self.bugKey = bug.key()
-				bug.count+=1
+				self.put()
+				bug.count += 1
 				bug.lastIncident = self.crashTime
 				bug.put()
+				if oldbug:
+					logging.debug("Reducing count (%d) of old bug: %d" % oldbug.count, oldbug.key().id())
+					if oldbug.count == 1:
+						logging.debug("Deleting old bug: %d" % oldbug.key().id())
+						oldbug.delete()
+					else:
+						logging.debug("Old bug count: %d" % oldbug.count)
+						oldbug.count -= 1
+						oldbug.put()
 			else:
-				logging.debug("Created new bug")
-				nb = Bug(signature = self.crashSignature,
-						count = 1,
-						lastIncident = self.crashTime)
-				self.bugKey = nb.put()
+				logging.debug("Same as old bug: %d" % oldbug.key().id())
+		else:
+			logging.debug("Created new bug")
+			nb = Bug(signature = self.crashSignature, count = 1, lastIncident = self.crashTime)
+			self.bugKey = nb.put()
 			logging.debug("Linked to bug, new count: " + str(self.bugKey.count))
 			self.put()
-	def parseSimpleValue(self, key, op=" = "):
-		pattern = key + op + r"(.*)<br>"
-		m = re.search(pattern, self.report)
-		if m and m.groups():
-			logging.debug("Parsed simple value: '" + key + "' = '" + m.group(1) + "'")
-			return m.group(1)
-		return ""
-
-class LogSenderHandler(InboundMailHandler):
-	def parseUTCDateTime(self, dt_str):
+	@classmethod
+	def parseUTCDateTime(cls, dt_str):
 		m = re.match(r"(\w+ \w+ \d+ \d+:\d+:\d+ )(\S+)( \d+)",  dt_str)
 		if m is None:
 			logging.warning("Datetime has unknown format: '" + dt_str + "'")
@@ -85,13 +89,13 @@ class LogSenderHandler(InboundMailHandler):
 			tz = timezone(tzname)
 		except UnknownTimeZoneError:
 			# Alternative timezone formats
-			newtzname = re.sub(r"^(\w+[+-])0*(\d*):00$", r"\1\2", tzname)
+			newtzname = re.sub(r"^(\w+[+-])0*(\d*)[:.]00$", r"\1\2", tzname)
 			newtzname = re.sub(r"^(GMT[+-]\d*)$", r"Etc/\1", newtzname)
 			newtzname = re.sub(r"^(EDT)$", r"EST5\1", newtzname)
 			newtzname = re.sub(r"^(CDT)$", r"CST6\1", newtzname)
 			newtzname = re.sub(r"^(MDT)$", r"MST7\1", newtzname)
 			newtzname = re.sub(r"^(PDT)$", r"PST8\1", newtzname)
-			logging.info("Changed timezone from '" + tzname + "' to '" + newtzname + "'")
+			logging.debug("Changed timezone from '" + tzname + "' to '" + newtzname + "'")
 			try:
 				tz = timezone(newtzname)
 			except UnknownTimeZoneError:
@@ -104,58 +108,81 @@ class LogSenderHandler(InboundMailHandler):
 			return (None, "localizing_failed")
 		logging.debug("UTC time parsed: '" + tm.astimezone(pytz.utc).strftime(r"%d/%m/%Y %H:%M:%S %Z") + "'")
 		return (tm.astimezone(pytz.utc), "")
-
-	def getCrashSignature(self, mail):
-		m = re.search(r"(.*com\.ichi2\.anki\..*)<br>", mail)
+	@classmethod
+	def getCrashSignature(cls, body):
+		m = re.search(r"<br>\s*(.*?com\.ichi2\.anki\..*?)<br>", body, re.M)
 		if m and m.groups():
 			return re.sub(r"\$[a-fA-F0-9@]*", "", m.group(1))
 		return ""
-
-	def parseSimpleValue(self, mail, key, op=" = "):
-		pattern = key + op + r"(.*)<br>"
-		m = re.search(pattern, mail)
+	@classmethod
+	def parseSimpleValue(cls, body, key, op=" = "):
+		pattern = r"<br>\s*" + key + op + r"(<a>)?(.*?)(</a>)?<br>"
+		m = re.search(pattern, body, re.M)
 		if m and m.groups():
-			logging.debug("Parsed simple value: '" + key + "' = '" + m.group(1) + "'")
-			return m.group(1)
+			logging.debug("Parsed value for key: '" + key + "' = '" + m.group(2) + "'")
+			return m.group(2)
+		else:
+			logging.debug("Parsed nothing for key: '" + key +"'")
 		return ""
-
-	def getMessageEssentials(self, subject, body):
+	@classmethod
+	def getMessageEssentials(cls, subject, body):
 		m = re.search("^Bug Report on (.*)$", subject)
 		if (m is None) or m.groups() is None:
 			logging.warning("Hospitalizing message: Unknown subject (" + subject + ")")
 			return (None, None, "", "unknown_subject")
-		(send_ts, hospital_reason) = self.parseUTCDateTime(m.group(1))
+		(send_ts, hospital_reason) = cls.parseUTCDateTime(m.group(1))
 		if hospital_reason:
 			logging.warning("Hospitalizing message: Failed in parsing send time")
 			return (None, None, "", "send_ts_" + hospital_reason)
 		else:
-			logging.info("Received on: " + send_ts.strftime(r"%d/%m/%Y %H:%M:%S %Z"))
-		crash_str = self.parseSimpleValue(body, "Report Generated", ": ")
+			logging.debug("Received on: " + send_ts.strftime(r"%d/%m/%Y %H:%M:%S %Z"))
+		crash_str = cls.parseSimpleValue(body, "Report Generated", ": ")
 		if not crash_str:
 			logging.warning("Hospitalizing message: Missing generated time line in body")
 			return (None, None, "", "crash_time_missing")
-		(crash_ts, hospital_reason) = self.parseUTCDateTime(crash_str)
+		(crash_ts, hospital_reason) = cls.parseUTCDateTime(crash_str)
 		if hospital_reason:
 			logging.warning("Hospitalizing message: Failed in parsing crash time")
 			return (None, None, "", "crash_ts_" + hospital_reason)
 		else:
-			logging.info("Crashed on: " + crash_ts.strftime(r"%d/%m/%Y %H:%M:%S %Z"))
-		signature = self.getCrashSignature(body)
+			logging.debug("Crashed on: " + crash_ts.strftime(r"%d/%m/%Y %H:%M:%S %Z"))
+		signature = cls.getCrashSignature(body)
 		if signature:
-			logging.info("Signature: '" + signature + "'")
+			logging.debug("Signature: '" + signature + "'")
 		else:
 			logging.warning("Hospitalizing message: No signature found")
 			return (None, None, "", "no_signature")
 		return (send_ts, crash_ts, signature, "")
+	def parseReport(self):
+		(send_ts, crash_ts, signature, hospital_reason) = CrashReport.getMessageEssentials(self.crashId, self.report)
+		if hospital_reason:
+			return hospital_reason
+		self.packageName = self.parseSimpleValue(self.report, "PackageName")
+		self.versionName = self.parseSimpleValue(self.report, "VersionName")
+		self.crashSignature = signature
+		self.crashTime = crash_ts
+		self.sendTime = send_ts
+		self.brand = self.parseSimpleValue(self.report, "Brand")
+		self.model = self.parseSimpleValue(self.report, "Model")
+		self.product = self.parseSimpleValue(self.report, "Product")
+		self.device = self.parseSimpleValue(self.report, "Device")
+		self.androidOSId = self.parseSimpleValue(self.report, "ID")
+		self.androidOSVersion = self.parseSimpleValue(self.report, "AndroidVersion")
+		try:
+			self.availableInternalMemory = long(self.parseSimpleValue(self.report, "AvailableInternalMemory"))
+		except ValueError:
+			logging.warning("Hospitalizing message: Failed in parsing available internal memory: '" + self.parseSimpleValue(self.report, "AvailableInternalMemory") + "'")
+			return "avail_mem_parse_error"
+		self.tags = self.parseSimpleValue(self.report, "Tags")
+		self.linked = False
+		self.bugId = 0
+		self.issueLink = None
+		self.put()
+		return ""
 
+class LogSenderHandler(InboundMailHandler):
 	def receive(self, mail_message):
-		logging.info("Message from: " + mail_message.sender)
-		logging.info("Subject: " + mail_message.subject)
-#		try:
-#			body = mail_message.bodies('text/plain').next()[1].decode()
-#			logging.info("Received body: '" + body + "'")
-#		except StopIteration:
-#			logging.info("Can't retrieve html body of mail")
+		logging.info("Message from: " + mail_message.sender + " - Subject: " + mail_message.subject)
 		try:
 			body = mail_message.bodies('text/html').next()[1].decode()
 		except StopIteration:
@@ -163,37 +190,16 @@ class LogSenderHandler(InboundMailHandler):
 			return
 		body = re.sub(r"<p>", "", body)
 		body = re.sub(r"</p>", "<br>", body)
-#		logging.debug("Received html body: '" + body + "'")
-		(send_ts, crash_ts, signature, hospital_reason) = self.getMessageEssentials(mail_message.subject, body)
-
+		cr = CrashReport(email = mail_message.sender, crashId = mail_message.subject, report = body)
+		hospital_reason = cr.parseReport()
 		if hospital_reason:
-			logging.debug("Hospitalized body: '" + body)
-			cr = HospitalizedReport(crashId=mail_message.subject,
+			logging.info("Hospitalized body: '" + body)
+			hr = HospitalizedReport(crashId=mail_message.subject,
 					crashBody=body,
 					diagnosis=hospital_reason)
-			cr.put()
+			hr.put()
 		else:
-			cr = CrashReport(crashId=mail_message.subject,
-					packageName = self.parseSimpleValue(body, "PackageName"),
-					versionName = self.parseSimpleValue(body, "VersionName"),
-					crashSignature = signature,
-					email = db.Email(mail_message.sender),
-					crashTime = crash_ts,
-					sendTime = send_ts,
-					brand = self.parseSimpleValue(body, "Brand"),
-					model = self.parseSimpleValue(body, "Model"),
-					product = self.parseSimpleValue(body, "Product"),
-					device = self.parseSimpleValue(body, "Device"),
-					androidOSId = self.parseSimpleValue(body, "ID"),
-					androidOSVersion = self.parseSimpleValue(body, "AndroidVersion"),
-					availableInternalMemory = long(self.parseSimpleValue(body, "AvailableInternalMemory")),
-					tags = self.parseSimpleValue(body, "Tags"),
-					report = body,
-					linked = False,
-					bugId = 0,
-					issueLink = None)
-			cr.put()
-			cr.addToBug()
+			cr.linkToBug()
 
 def main():
 	application = webapp.WSGIApplication([LogSenderHandler.mapping()], debug=True)
