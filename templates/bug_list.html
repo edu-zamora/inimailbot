@@ -8,11 +8,18 @@
 		<link rel="stylesheet" type="text/css" href="/css/main.css">
 	</head>
 	<body>
-		<div class="title">Bugs report</div>
-		<br>
-
+		<div class="title_line">
+			<div class="title float_left">Bugs report</div>
+			<div class="float_right">
+				<a href="/ankidroid_triage/report_crashes">Crashes Report</a>
+				&nbsp;
+				Bugs Report
+			</div>
+		</div>
+		<br/>
+		<br/>
 		<div class="above_table">
-			<div class="prev_next">
+			<div class="float_left">
 			{% if last_page|gt:0 %}
 				{% if page|gt:0 %}
 				<a href="/ankidroid_triage/report_crashes?page=0">&lt;&lt; First {{ page_size }}</a>
@@ -27,17 +34,17 @@
 				{% endif %}
 			{% endif %}
 			</div>
-			<div class="total_found">Total found: {{ total_results }}</div>
+			<div class="float_right">Total found: {{ total_results }}</div>
 		</div>
 
 		<table>
 			<thead>
 				<tr>
-					<th>Bug ID</th>
+					<th>BugID</th>
 					<th>Signature</th>
 					<th>Last Incident</th>
 					<th>Count</th>
-					<th>Issue #</th>
+					<th>Issue#</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -46,7 +53,7 @@
 					<td><a href="/ankidroid_triage/view_bug?bug_id={{ bg.key.id }}">{{ bg.key.id }}</a></td>
 					<td>{{ bg.signature }}</td>
 					<td>{{ bg.lastIncident|date:"Y-m-d H:i:s T" }}</td>
-					<td><a href="/ankidroid_triage/report_crashes?bug_id={{ bg.key.id }}">{{ bg.count }}</td>
+					<td><a href="/ankidroid_triage/report_crashes?bug_id={{ bg.key.id }}">{{ bg.count }}</a></td>
 						<td>{% if bg.issueName %}<a href="http://code.google.com/p/ankidroid/issues/detail?id={{ bg.issueName }}">{{ bg.issueName }}</a>{% endif %}</td>
 				</tr>
 				{% endfor %}

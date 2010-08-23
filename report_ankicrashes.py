@@ -25,6 +25,50 @@ class MainPage(webapp.RequestHandler):
 		self.response.headers['Content-type'] = 'text/plain'
 		self.response.out.write('Hello world!')
 
+class ViewBug(webapp.RequestHandler):
+	def post(self):
+		post_args = self.request.arguments()
+		bugId = self.request.get('bug_id')
+		bug = Bug.get_by_id(long(bugId))
+		if bug:
+			if "find_issue" in post_args:
+				# Scan for matching issue
+			elif "save_issue" in post_args:
+				# Save the entered issue
+				issueName = self.request.get('issue')
+				if re.search(r"^[0-9]+$", issueName):
+					bug.issueName = issueName
+					bug.linked = True
+					bug.put()
+				else:
+					logging.warning("Saving issue - non numeric value: '" + issueName + "'")
+		else:
+			logging.warning("Saving issue - not valid bug ID: '" + bugId + "'")
+		template_values = {'bg': bug}
+		path = os.path.join(os.path.dirname(__file__), 'templates/bug_view.html')
+		self.response.out.write(template.render(path, template_values))
+
+
+		for a in args:
+			logging.info("args: " + a)#self.request.arguments())
+
+
+	def get(self):
+		bugId = self.request.get('bug_id')
+		bug = Bug.get_by_id(long(bugId))
+		template_values = {'bg': bug}
+		path = os.path.join(os.path.dirname(__file__), 'templates/bug_view.html')
+		self.response.out.write(template.render(path, template_values))
+
+class ViewCrash(webapp.RequestHandler):
+	def get(self):
+		crashId = self.request.get('crash_id')
+		crash = CrashReport.get_by_id(long(crashId))
+		template_values = {'cr': crash}
+		path = os.path.join(os.path.dirname(__file__), 'templates/crash_view.html')
+		self.response.out.write(template.render(path, template_values))
+
+
 class ReportBugs(webapp.RequestHandler):
 	def get(self):
 		bugs_query = Bug.all()
@@ -85,8 +129,8 @@ application = webapp.WSGIApplication(
 		[(r'^/ankidroid_triage/?$', MainPage),
 			(r'^/ankidroid_triage/report_crashes/?.*', ReportCrashes),
 			(r'^/ankidroid_triage/report_bugs/?.*', ReportBugs),
-			(r'^/ankidroid_triage/view_crash/?.*', MainPage),
-			(r'^/ankidroid_triage/view_bug/?.*', MainPage),
+			(r'^/ankidroid_triage/view_crash/?.*', ViewCrash),
+			(r'^/ankidroid_triage/view_bug/?.*', ViewBug),
 			(r'^/ankidroid_triage/hospital/?.*', MainPage)],
 		debug=True)
 
