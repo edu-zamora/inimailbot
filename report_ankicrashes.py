@@ -1,4 +1,6 @@
 import os, sys, logging, re
+from urllib import quote_plus
+from string import strip
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from google.appengine.dist import use_library
@@ -10,10 +12,13 @@ settings._target = None
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext.webapp import template
+from google.appengine.api.urlfetch import fetch
+from google.appengine.api.urlfetch import Error
 
 from receive_ankicrashes import CrashReport
 from receive_ankicrashes import HospitalizedReport
 from receive_ankicrashes import Bug
+from BeautifulSoup import BeautifulSoup
 
 # Remove the standard version of Django
 #for k in [k for k in sys.modules if k.startswith('django')]:
@@ -26,6 +31,56 @@ class MainPage(webapp.RequestHandler):
 		self.response.out.write('Hello world!')
 
 class ViewBug(webapp.RequestHandler):
+	issueStatusOrder = {
+			'Started': 0,
+			'Accepted': 1,
+			'New': 2,
+			'FixedInDev': 3,
+			'Fixed': 4,
+			'Done': 5,
+			'Invalid': 6,
+			'WontFix': 7,
+			'Duplicate': 8
+			}
+	issuePriorityOrder = {
+			'Critical': 0,
+			'High': 1,
+			'Medium': 2,
+			'Low': 3
+			}
+
+	@classmethod
+	def compareIssues(cls, a, b):
+		# First prioritize on Status, then on priority, then on -ID
+		logging.info("Comparing " + str(a) + " " + str(b))
+		logging.info("Comparing status: " + str(cls.issueStatusOrder[a['status']]) + " " + str(cls.issueStatusOrder[a['status']]) + " " + str(cmp(cls.issueStatusOrder[a['status']], cls.issueStatusOrder[b['status']])))
+		logging.info("Comparing priority: " + str(cls.issuePriorityOrder[a['priority']]) + " " + str(cls.issuePriorityOrder[a['priority']]) + " " + str(cmp(cls.issuePriorityOrder[a['priority']], cls.issuePriorityOrder[b['priority']])))
+		logging.info("Comparing ID: " + str(cmp(-a['id'], -b['id'])))
+		return cmp(cls.issueStatusOrder[a['status']], cls.issueStatusOrder[b['status']]) or cmp(cls.issuePriorityOrder[a['priority']], cls.issuePriorityOrder[b['priority']]) or cmp(-a['id'], -b['id'])
+
+	def findIssue(self, signature):
+		# format signature for google query
+		urlEncodedSignature = quote_plus(signature)
+		logging.info("URL-Encoded: '" + urlEncodedSignature + "'")
+		url = r"http://code.google.com/p/ankidroid/issues/list?can=1&q=" + urlEncodedSignature + r"&colspec=ID+Status+Priority"
+		try:
+			result = fetch(url)
+			if result.status_code == 200:
+				logging.debug("Results retrieved (" + str(len(result.content)) + "): '" + str(result.content) + "'")
+				soup = BeautifulSoup(result.content)
+				issueID = soup.findAll('td', {'class': 'vt id col_0'})
+				issueStatus = soup.findAll('td', {'class': 'vt col_1'})
+				issuePriority = soup.findAll('td', {'class': 'vt col_2'})
+				logging.debug("Issue found: " + str(issueID) + " " + str(issueStatus) + " " + str(issuePriority))
+				issues = []
+				for i, issue in enumerate(issueID):
+					issues.append({'id': long(issueID[i].a.string), 'status':	strip(issueStatus[i].a.string), 'priority': strip(issuePriority[i].a.string)})
+				logging.info("Unsorted list: " + str(issues))
+				issues.sort(ViewBug.compareIssues)
+				logging.info("Sorted list: " + str(issues))
+		except Error, e:
+			logging.error("Error while retrieving query results: %s" % str(e))
+
 	def post(self):
 		post_args = self.request.arguments()
 		bugId = self.request.get('bug_id')
@@ -33,15 +88,20 @@ class ViewBug(webapp.RequestHandler):
 		if bug:
 			if "find_issue" in post_args:
 				# Scan for matching issue
-				pass
+				self.findIssue(bug.signature)
 			elif "save_issue" in post_args:
 				# Save the entered issue
 				issueName = self.request.get('issue')
-				if re.search(r"^[0-9]+$", issueName):
-					bug.issueName = long(issueName)
-					bug.linked = True
+				if re.search(r"^[0-9]*$", issueName):
+					if issueName:
+						bug.issueName = long(issueName)
+						bug.linked = False
+						bug.fixed = False
+					else:
+						bug.issueName = None
+						bug.linked = True
 					bug.put()
-					logging.info("Saving issue - value: '" + issueName + "'")
+					logging.debug("Saving issue - value: '" + issueName + "'")
 				else:
 					logging.warning("Saving issue - non numeric value: '" + issueName + "'")
 		else:
