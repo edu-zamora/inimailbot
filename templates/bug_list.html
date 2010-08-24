@@ -22,15 +22,15 @@
 			<div class="float_left">
 			{% if last_page|gt:0 %}
 				{% if page|gt:0 %}
-				<a href="/ankidroid_triage/report_crashes?page=0">&lt;&lt; First {{ page_size }}</a>
+				<a href="/ankidroid_triage/report_bugs?page=0">&lt;&lt; First {{ page_size }}</a>
 				&nbsp;
-				<a href="/ankidroid_triage/report_crashes?page={{ page|sub:1 }}">&lt; Previous {{ page_size }}</a>
+				<a href="/ankidroid_triage/report_bugs?page={{ page|sub:1 }}">&lt; Previous {{ page_size }}</a>
 				&nbsp;
 				{% endif %}
 				{% if page|lt:last_page %}
-				<a href="/ankidroid_triage/report_crashes?page={{ page|add:1 }}">Next {{ page_size }} &gt;</a>
+				<a href="/ankidroid_triage/report_bugs?page={{ page|add:1 }}">Next {{ page_size }} &gt;</a>
 				&nbsp;
-				<a href="/ankidroid_triage/report_crashes?page={{ last_page }}">Last {{ total_results|sub:1|mod:page_size|add:1 }} &gt;&gt;</a>
+				<a href="/ankidroid_triage/report_bugs?page={{ last_page }}">Last {{ total_results|sub:1|mod:page_size|add:1 }} &gt;&gt;</a>
 				{% endif %}
 			{% endif %}
 			</div>
