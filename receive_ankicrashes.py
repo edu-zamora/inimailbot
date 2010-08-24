@@ -66,7 +66,7 @@ class CrashReport(db.Model):
 				logging.debug("Same as old bug: %d" % oldbug.key().id())
 		else:
 			logging.debug("Created new bug")
-			nb = Bug(signature = self.crashSignature, count = 1, lastIncident = self.crashTime)
+			nb = Bug(signature = self.crashSignature, count = 1, lastIncident = self.crashTime, linked = False, issueName='', fixed = False)
 			self.bugKey = nb.put()
 			logging.debug("Linked to bug, new count: " + str(self.bugKey.count))
 			self.put()
