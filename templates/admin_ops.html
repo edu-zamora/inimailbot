@@ -1,0 +1,43 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Language" content="en-us" />
+		<title>AnkiDroid Triage - Admin operations</title>
+		<link rel="stylesheet" type="text/css" href="/css/main.css">
+	</head>
+	<body>
+		<div class="title_line">
+			<div class="title float_left">Admin operations</div>
+			<div class="float_right">
+				<a href="report_crashes">Crashes Report</a>
+				&nbsp;
+				<a href="/ankidroid_triage/report_bugs">Bugs Report</a>
+			</div>
+		</div>
+		<br/>
+		<br/>
+		<br/>
+
+		<table>
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Signature1</th>
+					<th>Signature2</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for rs in results_list %}
+				<tr class="{% if forloop.counter|divisibleby:2 %}even{% else %}odd{% endif %}">
+					<td>{{ rs.id }}</td>
+					<td>{{ rs.sig1 }}</td>
+					<td>{{ rs.sig2 }}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+			</table>
+	</body>
+</html>
+
