@@ -7,6 +7,10 @@ handlers:
 - url: /_ah/mail/ankidroid_crash_reports@inimailbot\.appspotmail\.com.*
   script: receive_ankicrashes.py
 
+- url: /ankidroid_triage/admin_ops
+  script: admin_ops.py
+  login: admin
+
 - url: /ankidroid_triage.*
   script: report_ankicrashes.py
 
