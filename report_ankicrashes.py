@@ -61,7 +61,8 @@ class ViewBug(webapp.RequestHandler):
 
 	def findIssue(self, signature):
 		# format signature for google query
-		urlEncodedSignature = quote_plus(signature)
+		urlEncodedSignature = re.sub(':', ' ', signature)
+		urlEncodedSignature = quote_plus(urlEncodedSignature)
 		logging.info("URL-Encoded: '" + urlEncodedSignature + "'")
 		url = r"http://code.google.com/p/ankidroid/issues/list?can=1&q=" + urlEncodedSignature + r"&colspec=ID+Status+Priority"
 		try:
