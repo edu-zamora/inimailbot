@@ -10,8 +10,9 @@ from pytz.gae import pytz
 from pytz import timezone, UnknownTimeZoneError
 
 class HospitalizedReport(db.Model):
+	email = db.StringProperty(required=True)
 	crashId = db.StringProperty(required=True)
-	crashBody = db.TextProperty()
+	crashBody = db.TextProperty(required=True)
 	diagnosis = db.StringProperty()
 
 class Bug(db.Model):
@@ -191,7 +192,8 @@ class LogSenderHandler(InboundMailHandler):
 		hospital_reason = cr.parseReport()
 		if hospital_reason:
 			logging.info("Hospitalized body: '" + body)
-			hr = HospitalizedReport(crashId=mail_message.subject,
+			hr = HospitalizedReport(email=mail_message.sender,
+					crashId=mail_message.subject,
 					crashBody=body,
 					diagnosis=hospital_reason)
 			hr.put()

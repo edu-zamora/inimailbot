@@ -27,8 +27,9 @@ webapp.template.register_template_library('templatetags.basic_math')
 
 class MainPage(webapp.RequestHandler):
 	def get(self):
-		self.response.headers['Content-type'] = 'text/plain'
-		self.response.out.write('Hello world!')
+		self.redirect("/ankidroid_triage/report_crashes/")
+#		self.response.headers['Content-type'] = 'text/plain'
+#		self.response.out.write('Hello world!')
 
 class ViewBug(webapp.RequestHandler):
 	issueStatusOrder = {
@@ -98,11 +99,11 @@ class ViewBug(webapp.RequestHandler):
 				if re.search(r"^[0-9]*$", issueName):
 					if issueName:
 						bug.issueName = long(issueName)
-						bug.linked = False
-						bug.fixed = False
+						bug.linked = True
 					else:
 						bug.issueName = None
-						bug.linked = True
+						bug.linked = False
+					bug.fixed = False
 					bug.put()
 					logging.debug("Saving issue - value: '" + issueName + "'")
 				else:
@@ -155,6 +156,14 @@ class ReportBugs(webapp.RequestHandler):
 
 class ReportCrashes(webapp.RequestHandler):
 	def get(self):
+		# Remove successfully processed hospitalized reports
+		hospital_query = HospitalizedReport.all()
+		hospital_query.filter('diagnosis =', '')
+		hr_list = hospital_query.fetch(1000)
+		for hr in hr_list:
+			if not hr.diagnosis:
+				logging.info("Deleting hospitalized report: " + str(hr.key().id()))
+				hr.delete()
 		hospital_query = HospitalizedReport.all()
 		hospitalized = hospital_query.count()
 
@@ -180,10 +189,43 @@ class ReportCrashes(webapp.RequestHandler):
 				'last_page': last_page,
 				'bug_id': bugId,
 				'hospitalized': hospitalized}
-
 		path = os.path.join(os.path.dirname(__file__), 'templates/crash_list.html')
 		self.response.out.write(template.render(path, template_values))
 
+class ViewHospital(webapp.RequestHandler):
+	def post(self):
+		page = self.request.get('page', 0)
+		attemped_fix_id = self.request.get('crash_id', 0)
+		hr = HospitalizedReport.get_by_id(long(attemped_fix_id))
+		if hr:
+			cr = CrashReport(email = hr.email, crashId = hr.crashId, report = hr.crashBody)
+			hr.diagnosis = cr.parseReport()
+			hr.put()
+			if not hr.diagnosis:
+				cr.put()
+		self.redirect(r'hospital?page=' + page + r'&attemped_fix_id=' + attemped_fix_id + r'&fix_result=' + hr.diagnosis)
+
+	def get(self):
+		hospital_query = HospitalizedReport.all()
+		hospitalized = hospital_query.count()
+		page = int(self.request.get('page', 0))
+		attemped_fix_id = int(self.request.get('attemped_fix_id', 0))
+		fix_result = self.request.get('fix_result', 0)
+
+		hospitalized = []
+		total_results = hospital_query.count(1000000)
+		last_page = max((total_results - 1) // 20, 0)
+		if page > last_page:
+			page = last_page
+		hospitalized = hospital_query.fetch(20, int(page)*20)
+		template_values = {'hospitalized_list': hospitalized,
+				'total_results': total_results,
+				'page_size': 20,
+				'page': page,
+				'attemped_fix_id': attemped_fix_id,
+				'fix_result': fix_result}
+		path = os.path.join(os.path.dirname(__file__), 'templates/hospital.html')
+		self.response.out.write(template.render(path, template_values))
 
 application = webapp.WSGIApplication(
 		[(r'^/ankidroid_triage/?$', MainPage),
@@ -191,7 +233,7 @@ application = webapp.WSGIApplication(
 			(r'^/ankidroid_triage/report_bugs/?.*', ReportBugs),
 			(r'^/ankidroid_triage/view_crash/?.*', ViewCrash),
 			(r'^/ankidroid_triage/view_bug/?.*', ViewBug),
-			(r'^/ankidroid_triage/hospital/?.*', MainPage)],
+			(r'^/ankidroid_triage/hospital/?.*', ViewHospital)],
 		debug=True)
 
 def main():

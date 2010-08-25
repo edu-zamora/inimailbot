@@ -73,11 +73,23 @@ div.scrollable {
 	overflow: auto;
 }
 
-div.scanned {
+span.scanned {
 	color: #aaaa00;
 }
 
-div.confirmed {
+span.confirmed {
 	color: #00aa00;
+}
+
+div.fix_failure {
+	color: #aa0000;
+	width: 100%;
+	text-align: center;
+}
+
+div.fix_success {
+	color: #00aa00;
+	width: 100%;
+	text-align: center;
 }
 
