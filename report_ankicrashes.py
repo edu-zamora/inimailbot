@@ -33,14 +33,14 @@ class MainPage(webapp.RequestHandler):
 class ViewBug(webapp.RequestHandler):
 	issueStatusOrder = {
 			'Started': 0,
-			'Accepted': 1,
-			'New': 2,
-			'FixedInDev': 3,
-			'Fixed': 4,
-			'Done': 5,
-			'Invalid': 6,
-			'WontFix': 7,
-			'Duplicate': 8
+			'Accepted': 0,
+			'New': 0,
+			'FixedInDev': 1,
+			'Fixed': 2,
+			'Done': 2,
+			'Invalid': 3,
+			'WontFix': 3,
+			'Duplicate': 4
 			}
 	issuePriorityOrder = {
 			'Critical': 0,
@@ -78,17 +78,20 @@ class ViewBug(webapp.RequestHandler):
 				logging.info("Unsorted list: " + str(issues))
 				issues.sort(ViewBug.compareIssues)
 				logging.info("Sorted list: " + str(issues))
+				return issues
 		except Error, e:
 			logging.error("Error while retrieving query results: %s" % str(e))
+			return []
 
 	def post(self):
 		post_args = self.request.arguments()
 		bugId = self.request.get('bug_id')
 		bug = Bug.get_by_id(long(bugId))
+		issues = []
 		if bug:
 			if "find_issue" in post_args:
 				# Scan for matching issue
-				self.findIssue(bug.signature)
+				issues = self.findIssue(bug.signature)
 			elif "save_issue" in post_args:
 				# Save the entered issue
 				issueName = self.request.get('issue')
@@ -106,7 +109,7 @@ class ViewBug(webapp.RequestHandler):
 					logging.warning("Saving issue - non numeric value: '" + issueName + "'")
 		else:
 			logging.warning("Saving issue - not valid bug ID: '" + bugId + "'")
-		template_values = {'bg': bug}
+		template_values = {'bg': bug, 'issues': issues}
 		path = os.path.join(os.path.dirname(__file__), 'templates/bug_view.html')
 		self.response.out.write(template.render(path, template_values))
 

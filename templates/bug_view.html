@@ -22,7 +22,14 @@
 			Click here to scan existing issues for matching signature and link this bug<br/>
 			<form name="issue_autolink" method="post" action="/ankidroid_triage/view_bug">
 				<input type="hidden" name="bug_id" value="{{ bg.key.id }}" />
-				<input type="text" size="10" name="issue" value="{% if scannedIssue %}{{ scannedIssue }}{% else %}{{ bg.issueName|default_if_none:"" }}{% endif %}" />
+				<input type="text" id="issue_input" size="10" name="issue" value="{% if scannedIssue %}{{ scannedIssue }}{% else %}{{ bg.issueName|default_if_none:"" }}{% endif %}" />
+				{% if issues %}
+				<select name="issue_list" onchange="document.getElementById('issue_input').value = this.options[this.selectedIndex].value;">
+					{% for iss in issues %}
+					<option value="{{ iss.id }}">{{ iss.id }} ({{ iss.status }}) {{ iss.priority }}</option>
+					{% endfor %}
+				</select>
+				{% endif %}
 				{% if bug.issueName %}
 					{% if bug.linked %}
 					<div class="confirmed">(scanned and confirmed)</div>
