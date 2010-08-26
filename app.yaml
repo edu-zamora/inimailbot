@@ -4,18 +4,22 @@ runtime: python
 api_version: 1
 
 handlers:
+- url: /favicon.ico
+  static_files: media/img/favicon.ico
+  upload: media/img/favicon.ico
+
+- url: /css
+  static_dir: css
+
 - url: /_ah/mail/ankidroid_crash_reports@inimailbot\.appspotmail\.com.*
   script: receive_ankicrashes.py
 
-- url: /ankidroid_triage/admin_ops
+- url: /ankidroid_triage/admin_.*
   script: admin_ops.py
   login: admin
 
 - url: /ankidroid_triage.*
   script: report_ankicrashes.py
-
-- url: /css
-  static_dir: css
 
 inbound_services:
 - mail
