@@ -29,17 +29,27 @@ class ShowCrashBody(webapp.RequestHandler):
 	def get(self):
 		crId = long(self.request.get('id'))
 		cr = CrashReport.get_by_id(crId)
-		template_values = {'crash_body': cr.report}
+		m = re.search(r'^(.*--\&gt; END REPORT 1 \&lt;--).*$', cr.report, re.S)
+		new_report = m.group(1)
+		template_values = {'crash_body': cr.report,
+				'new_crash_body': new_report}
+		logging.info(cr.report)
+		logging.info(new_report)
 		path = os.path.join(os.path.dirname(__file__), 'templates/admin_ops_show.html')
 		self.response.out.write(template.render(path, template_values))
 
 class AdminOps(webapp.RequestHandler):
 	@classmethod
 	def getCrashSignature2(cls, body):
-		m = re.search(r"<br>\s*(at com\.ichi2\.anki\..*?)<br>", body, re.M)
-		if m and m.groups():
-			return re.sub(r"\$[a-fA-F0-9@]*", "", m.group(1))
-		return ""
+		result1 = ''
+		result2 = ''
+		m1 = re.search(r"Begin Stacktrace\s*(<br>\s*)*(\S.*?\S)\s*<br>", body, re.M)
+		if m1 and m1.groups():# and m2 and m2.groups():
+			result1 = re.sub(r"\$[a-fA-F0-9@]*", "", m1.group(2))
+		m2 = re.search(r"<br>\s*(at\scom\.ichi2\.anki\..*?\S)\s*<br>", body, re.M|re.U)
+		if m2 and m2.groups():# and m2 and m2.groups():
+			result2 = re.sub(r"\$[a-fA-F0-9@]*", "", m2.group(1))
+		return result1 + "-" + result2
 	def get(self):
 
 		crashes_query = CrashReport.all()
@@ -50,14 +60,20 @@ class AdminOps(webapp.RequestHandler):
 		crashes = crashes_query.fetch(200)
 		results_list=[]
 		for cr in crashes:
-			results_list.append({'id': cr.key().id(), 'sig1': CrashReport.getCrashSignature(cr.report), 'sig2': self.getCrashSignature2(cr.report)})
+			m = re.search(r'^(.*--\&gt; END REPORT 1 \&lt;--<br>).*$', cr.report, re.S)
+			new_report = ''
+			if m:
+				new_report = m.group(1)
+			if cr.report != new_report:
+				results_list.append({'id': cr.key().id(), 'sig1': cr.report, 'sig2': new_report})
+			#results_list.append({'id': cr.key().id(), 'sig1': CrashReport.getCrashSignature(cr.report), 'sig2': self.getCrashSignature2(cr.report)})
 		template_values = {'results_list': results_list}
 		path = os.path.join(os.path.dirname(__file__), 'templates/admin_ops.html')
 		self.response.out.write(template.render(path, template_values))
 
 application = webapp.WSGIApplication(
-		[(r'^/ankidroid_triage/admin_ops$', AdminOps),
-		(r'^/ankidroid_triage/admin_ops?id=.*$', ShowCrashBody)],
+		[(r'^/ankidroid_triage/admin_show.*$', ShowCrashBody),
+		(r'^/ankidroid_triage/admin_ops$', AdminOps)],
 		debug=True)
 
 def main():
