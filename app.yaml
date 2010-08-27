@@ -8,6 +8,10 @@ handlers:
   static_files: media/img/favicon.ico
   upload: media/img/favicon.ico
 
+- url: /robots.txt
+  static_files: robots.txt
+  upload: robots.txt
+
 - url: /css
   static_dir: css
 
