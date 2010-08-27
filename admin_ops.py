@@ -60,10 +60,12 @@ class AdminOps(webapp.RequestHandler):
 		crashes = crashes_query.fetch(200)
 		results_list=[]
 		for cr in crashes:
-			m = re.search(r'^(.*--\&gt; END REPORT 1 \&lt;--<br>).*$', cr.report, re.S)
+			m = re.search(r'^(.*--\&gt; END REPORT \d \&lt;--<br>).*$', cr.report, re.S)
 			new_report = ''
 			if m:
 				new_report = m.group(1)
+			else:
+				new_report = cr.report
 			if cr.report != new_report:
 				results_list.append({'id': cr.key().id(), 'sig1': cr.report, 'sig2': new_report})
 			#results_list.append({'id': cr.key().id(), 'sig1': CrashReport.getCrashSignature(cr.report), 'sig2': self.getCrashSignature2(cr.report)})
