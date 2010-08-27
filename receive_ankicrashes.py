@@ -191,6 +191,7 @@ class LogSenderHandler(InboundMailHandler):
 		# Convert paragraphs to <br>
 		body = re.sub(r"<p>", "", body)
 		body = re.sub(r"</p>", "<br>", body)
+		body = re.sub(r"<br\s*/>", "<br>", body, re.U)
 		# Remove anything following the END of REPORT (like personal email signatures)
 		m = re.search(r'^(.*--\&gt; END REPORT \d \&lt;--).*$', cr.report, re.S)
 		if m:

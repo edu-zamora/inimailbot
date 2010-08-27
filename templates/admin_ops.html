@@ -37,7 +37,22 @@
 				</tr>
 				{% endfor %}
 			</tbody>
-			</table>
+		</table>
+		<hr>
+		<table>
+			<thead>
+				<tr>
+					<th>Tag</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for tg in tags %}
+				<tr class="{% if forloop.counter|divisibleby:2 %}even{% else %}odd{% endif %}">
+					<td>{{ tg }}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
 	</body>
 </html>
 
