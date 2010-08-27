@@ -22,6 +22,8 @@ class Bug(db.Model):
 	linked = db.BooleanProperty()
 	issueName = db.IntegerProperty()
 	fixed = db.BooleanProperty()
+	#status = db.StringProperty()
+	#priority = db.StringProperty()
 
 class CrashReport(db.Model):
 	email = db.EmailProperty(required=True)
@@ -186,8 +188,15 @@ class LogSenderHandler(InboundMailHandler):
 		except StopIteration:
 			logging.warning("Rejecting message: Can't retrieve body of mail")
 			return
+		# Convert paragraphs to <br>
 		body = re.sub(r"<p>", "", body)
 		body = re.sub(r"</p>", "<br>", body)
+		# Remove anything following the END of REPORT (like personal email signatures)
+		m = re.search(r'^(.*--\&gt; END REPORT \d \&lt;--).*$', cr.report, re.S)
+		if m:
+			body = m.group(1)
+		# Strip all tags except <br>
+		body = re.sub(r'<(?!br/?>)[^>]+>', '', body)
 		cr = CrashReport(email = mail_message.sender, crashId = mail_message.subject, report = body)
 		hospital_reason = cr.parseReport()
 		if hospital_reason:
