@@ -52,7 +52,7 @@ class AdminOps(webapp.RequestHandler):
 		return result1 + "-" + result2
 	def get(self):
 
-		crashes_query = HospitalizedReport.all()
+		crashes_query = CrashReport.all()
 		crashes = []
 #		crashes_query.order("crashTime")
 		total_results = crashes_query.count(1000000)
@@ -61,19 +61,19 @@ class AdminOps(webapp.RequestHandler):
 		results_list=[]
 		tags=set()
 		for cr in crashes:
-			m = re.search(r'^(.*--\&gt; END REPORT \d \&lt;--).*$', cr.crashBody, re.S)
-			new_report = ''
-			if m:
-				new_report = m.group(1)
-			else:
-				new_report = cr.crashBody
-			new_report = re.sub(r'<(?!br/?>)[^>]+>', '', new_report)
-			for mt in re.finditer(r'<[^>]+>', cr.crashBody, re.S):
-				if mt.group(0) not in tags:
-					tags.add(mt.group(0))
+		#	m = re.search(r'^(.*--\&gt; END REPORT \d \&lt;--).*$', cr.crashBody, re.S)
+		#	new_report = ''
+		#	if m:
+		#		new_report = m.group(1)
+		#	else:
+		#		new_report = cr.crashBody
+		#	new_report = re.sub(r'<(?!br/?>)[^>]+>', '', new_report)
+		#	for mt in re.finditer(r'<[^>]+>', cr.crashBody, re.S):
+		#		if mt.group(0) not in tags:
+		#			tags.add(mt.group(0))
 			#cr.crashBody = new_report
 			#cr.put()
-			results_list.append({'id': cr.key().id(), 'sig1': cr.crashBody, 'sig2': new_report})
+			results_list.append({'id': cr.key().id(), 'sig1': cr.crashId, 'sig2': ''})
 			#results_list.append({'id': cr.key().id(), 'sig1': CrashReport.getCrashSignature(cr.report), 'sig2': self.getCrashSignature2(cr.report)})
 		template_values = {'results_list': results_list, 'tags': tags}
 		path = os.path.join(os.path.dirname(__file__), 'templates/admin_ops.html')

@@ -184,10 +184,16 @@ class LogSenderHandler(InboundMailHandler):
 	def receive(self, mail_message):
 		logging.info("Message from: " + mail_message.sender + " - Subject: " + mail_message.subject)
 		try:
+			bodies = mail_message.bodies('text/plain')
+			for ct, bd in bodies:
+				logging.info('body type: ' + ct)
+			bodies = mail_message.bodies('text/html')
+			for ct, bd in bodies:
+				logging.info('body htype: ' + ct)
 			body = mail_message.bodies('text/html').next()[1].decode()
 		except StopIteration:
 			logging.warning("Rejecting message: Can't retrieve body of mail")
-			return
+			raise
 		# Convert paragraphs to <br>
 		body = re.sub(r"<p>", "", body)
 		body = re.sub(r"</p>", "<br>", body)
