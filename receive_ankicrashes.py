@@ -193,7 +193,7 @@ class LogSenderHandler(InboundMailHandler):
 		body = re.sub(r"</p>", "<br>", body)
 		body = re.sub(r"<br\s*/>", "<br>", body, re.U)
 		# Remove anything following the END of REPORT (like personal email signatures)
-		m = re.search(r'^(.*--\&gt; END REPORT \d \&lt;--).*$', cr.report, re.S)
+		m = re.search(r'^(.*--\&gt; END REPORT \d \&lt;--).*$', body, re.S)
 		if m:
 			body = m.group(1)
 		# Strip all tags except <br>
