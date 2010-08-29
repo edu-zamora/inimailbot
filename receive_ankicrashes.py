@@ -1,5 +1,6 @@
 import logging, email, re
 from datetime import datetime
+from cgi import escape
 from google.appengine.api import mail
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.mail_handlers import InboundMailHandler
@@ -110,14 +111,14 @@ class CrashReport(db.Model):
 		return (tm.astimezone(pytz.utc), "")
 	@classmethod
 	def getCrashSignature(cls, body):
-		m = re.search(r"<br>\s*(.*?com\.ichi2\.anki\..*?)<br>", body, re.M)
+		m = re.search(r".*<br>\s*(.*?com\.ichi2\.anki\..*?)<br>", body, re.M|re.U)
 		if m and m.groups():
 			return re.sub(r"\$[a-fA-F0-9@]*", "", m.group(1))
 		return ""
 	@classmethod
 	def parseSimpleValue(cls, body, key, op=" = "):
 		pattern = r"<br>\s*" + key + op + r"(<a>)?(.*?)(</a>)?<br>"
-		m = re.search(pattern, body, re.M)
+		m = re.search(pattern, body, re.M|re.U)
 		if m and m.groups():
 			logging.debug("Parsed value for key: '" + key + "' = '" + m.group(2) + "'")
 			return m.group(2)
@@ -146,7 +147,9 @@ class CrashReport(db.Model):
 			return (None, None, "", "crash_ts_" + hospital_reason)
 		else:
 			logging.debug("Crashed on: " + crash_ts.strftime(r"%d/%m/%Y %H:%M:%S %Z"))
-		signature = cls.getCrashSignature(body)
+		signa = cls.getCrashSignature(body)
+		logging.debug("Signature: '" + signa + "'")
+		signature = signa
 		if signature:
 			logging.debug("Signature: '" + signature + "'")
 		else:
@@ -183,17 +186,26 @@ class CrashReport(db.Model):
 class LogSenderHandler(InboundMailHandler):
 	def receive(self, mail_message):
 		logging.info("Message from: " + mail_message.sender + " - Subject: " + mail_message.subject)
+		body = ''
 		try:
-			bodies = mail_message.bodies('text/plain')
-			for ct, bd in bodies:
-				logging.info('body type: ' + ct)
-			bodies = mail_message.bodies('text/html')
-			for ct, bd in bodies:
-				logging.info('body htype: ' + ct)
+			# Get the body, try the html version, if not found we convert the plain to html
 			body = mail_message.bodies('text/html').next()[1].decode()
 		except StopIteration:
-			logging.warning("Rejecting message: Can't retrieve body of mail")
-			raise
+			logging.warning("Can't find html body, will use text/plain instead")
+		if not body:
+			try:
+				body = mail_message.bodies('text/plain').next()[1]
+				logging.info("encoding... " + str(isinstance(body, EncodedPayload)))
+				if isinstance(body, EncodedPayload):
+					logging.info("fixing encoding... " + body.encoding)
+					if body.encoding == "8bit":
+						body.encoding = '7bit' 
+				body = body.decode()
+				body = escape(body)
+				body = re.sub(r"\n", "<br>", body)
+			except StopIteration:
+				logging.warning("Rejecting message: Can't retrieve even text/plain body of mail")
+				raise
 		# Convert paragraphs to <br>
 		body = re.sub(r"<p>", "", body)
 		body = re.sub(r"</p>", "<br>", body)

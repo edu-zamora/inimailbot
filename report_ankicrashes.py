@@ -204,6 +204,7 @@ class ViewHospital(webapp.RequestHandler):
 			hr.put()
 			if not hr.diagnosis:
 				cr.put()
+				cr.linkToBug()
 		self.redirect(r'hospital?page=' + page + r'&attemped_fix_id=' + attemped_fix_id + r'&fix_result=' + hr.diagnosis)
 
 	def get(self):
