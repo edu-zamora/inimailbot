@@ -18,11 +18,13 @@
 import logging, email, re, hashlib
 from datetime import datetime
 from cgi import escape
+from urllib import quote
 from google.appengine.api import mail
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.mail_handlers import InboundMailHandler
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext import db
+from google.appengine.api.urlfetch import fetch
 
 from pytz.gae import pytz
 from pytz import timezone, UnknownTimeZoneError
@@ -44,6 +46,13 @@ class Bug(db.Model):
 	fixed = db.BooleanProperty()
 	status = db.StringProperty()
 	priority = db.StringProperty()
+	def updateStatusPriority(self):
+		url = r"http://code.google.com/feeds/issues/p/ankidroid/issues/full?id=" + str(self.issueName)
+		#r"http://code.google.com/p/ankidroid/issues/list?can=1&q=" + urlEncodedSignature + r"&colspec=ID+Status+Priority"
+		result = fetch(url)
+		if result.status_code == 200:
+			logging.debug("Results retrieved (" + str(len(result.content)) + "): '" + quote(str(result.content)) + "'")
+			soup = BeautifulStoneSoup(result.content)
 
 class CrashReport(db.Model):
 	email = db.EmailProperty(required=True)

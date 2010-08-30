@@ -122,6 +122,7 @@ class ViewBug(webapp.RequestHandler):
 						bug.issueName = None
 						bug.linked = False
 					bug.fixed = False
+					bug.updateStatusPriority()
 					bug.put()
 					logging.debug("Saving issue - value: '" + issueName + "'")
 				else:

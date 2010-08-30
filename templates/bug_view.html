@@ -82,7 +82,9 @@
 				<tr>
 					<th class="field_name">Linked Issue</th>
 					<td>{% if bg.issueName %}<a href="http://code.google.com/p/ankidroid/issues/detail?id={{ bg.issueName }}">{{ bg.issueName }}</a>{% endif %}</td>
-					</tr>
+				</tr>
+				<tr><th class="field_name">Status</th><td>{{ bg.status }}</td></tr>
+				<tr><th class="field_name">Priority</th><td>{{ bg.priority }}</td></tr>
 			</tbody>
 		</table>
 		{% else %}
