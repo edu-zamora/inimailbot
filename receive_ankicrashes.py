@@ -32,6 +32,7 @@ class HospitalizedReport(db.Model):
 	crashId = db.StringProperty(required=True)
 	crashBody = db.TextProperty(required=True)
 	diagnosis = db.StringProperty()
+	processed = db.BooleanProperty()
 
 class Bug(db.Model):
 	signature = db.TextProperty(required=True)
@@ -255,7 +256,8 @@ class LogSenderHandler(InboundMailHandler):
 			hr = HospitalizedReport(email=mail_message.sender,
 					crashId=mail_message.subject,
 					crashBody=body,
-					diagnosis=hospital_reason)
+					diagnosis=hospital_reason,
+					processed=False)
 			hr.put()
 		else:
 			cr.linkToBug()

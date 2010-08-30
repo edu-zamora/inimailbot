@@ -74,15 +74,11 @@
 						<td><div class="scrollable">{{ hr.crashBody|safe }}</div></td>
 						<td>{{ hr.diagnosis }}</td>
 						<td>
-							<input type="submit" name="fix_report" value="Re-parse" onclick="document.getElementById('crash_id_var').value='{{ hr.key.id }}';">
-							<br/>
-							{% ifequal attemped_fix_id hr.key.id %}
-								{% if fix_result %}
-							<div class="fix_failure">{{ fix_result }}</div>
-								{% else %}
+							{% if cr.processed %}
 							<div class="fix_success">FIXED!</div>
-								{% endif %}
-							{% endifequal %}
+							{% else %}
+							<input type="submit" name="fix_report" value="Re-parse" onclick="document.getElementById('crash_id_var').value='{{ hr.key.id }}';">
+							{% endif %}
 						</td>
 					</tr>
 					{% endfor %}

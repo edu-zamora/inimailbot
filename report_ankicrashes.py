@@ -179,7 +179,7 @@ class ReportCrashes(webapp.RequestHandler):
 	def get(self):
 		# Remove successfully processed hospitalized reports
 		hospital_query = HospitalizedReport.all()
-		hospital_query.filter('diagnosis =', '')
+		hospital_query.filter('processed =', True)
 		hr_list = hospital_query.fetch(1000)
 		for hr in hr_list:
 			if not hr.diagnosis:
@@ -218,14 +218,15 @@ class ViewHospital(webapp.RequestHandler):
 		page = self.request.get('page', 0)
 		attemped_fix_id = self.request.get('crash_id', 0)
 		hr = HospitalizedReport.get_by_id(long(attemped_fix_id))
-		if hr:
+		if hr and not hr.processed:
 			cr = CrashReport(email = hr.email, crashId = hr.crashId, report = hr.crashBody)
 			hr.diagnosis = cr.parseReport()
-			hr.put()
 			if not hr.diagnosis:
+				hr.processed = True
 				cr.put()
 				cr.linkToBug()
-		self.redirect(r'hospital?page=' + page + r'&attemped_fix_id=' + attemped_fix_id + r'&fix_result=' + hr.diagnosis)
+			hr.put()
+		self.redirect(r'hospital?page=' + page)
 
 	def get(self):
 		hospital_query = HospitalizedReport.all()
