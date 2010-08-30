@@ -61,7 +61,7 @@ class ViewBug(webapp.RequestHandler):
 
 	def findIssue(self, signature):
 		# format signature for google query
-		urlEncodedSignature = re.sub(':', ' ', signature)
+		urlEncodedSignature = re.sub(r'([:=])(\S)', r'\1 \2', signature)
 		urlEncodedSignature = quote_plus(urlEncodedSignature)
 		logging.info("URL-Encoded: '" + urlEncodedSignature + "'")
 		url = r"http://code.google.com/p/ankidroid/issues/list?can=1&q=" + urlEncodedSignature + r"&colspec=ID+Status+Priority"
@@ -111,7 +111,10 @@ class ViewBug(webapp.RequestHandler):
 					logging.warning("Saving issue - non numeric value: '" + issueName + "'")
 		else:
 			logging.warning("Saving issue - not valid bug ID: '" + bugId + "'")
-		template_values = {'bg': bug, 'issues': issues}
+		single_result = ''
+		if len(issues) == 1:
+			single_result = issues[0]['id']
+		template_values = {'bg': bug, 'issues': issues, 'single_result': single_result}
 		path = os.path.join(os.path.dirname(__file__), 'templates/bug_view.html')
 		self.response.out.write(template.render(path, template_values))
 

@@ -1,4 +1,4 @@
-import logging, email, re
+import logging, email, re, hashlib
 from datetime import datetime
 from cgi import escape
 from google.appengine.api import mail
@@ -17,14 +17,15 @@ class HospitalizedReport(db.Model):
 	diagnosis = db.StringProperty()
 
 class Bug(db.Model):
-	signature = db.StringProperty(required=True)
+	signature = db.TextProperty(required=True)
+	signHash = db.StringProperty()
 	count = db.IntegerProperty(required=True)
 	lastIncident = db.DateTimeProperty()
 	linked = db.BooleanProperty()
 	issueName = db.IntegerProperty()
 	fixed = db.BooleanProperty()
-	#status = db.StringProperty()
-	#priority = db.StringProperty()
+	status = db.StringProperty()
+	priority = db.StringProperty()
 
 class CrashReport(db.Model):
 	email = db.EmailProperty(required=True)
@@ -32,7 +33,8 @@ class CrashReport(db.Model):
 	report = db.TextProperty(required=True)
 	packageName = db.StringProperty()
 	versionName = db.StringProperty()
-	crashSignature = db.StringProperty()
+	crashSignature = db.TextProperty()
+	signHash = db.StringProperty()
 	crashTime = db.DateTimeProperty()
 	sendTime = db.DateTimeProperty()
 	brand = db.StringProperty()
@@ -45,7 +47,7 @@ class CrashReport(db.Model):
 	tags = db.StringProperty()
 	bugKey = db.ReferenceProperty(Bug)
 	def linkToBug(self):
-		results = db.GqlQuery("SELECT * FROM Bug WHERE signature = :1", self.crashSignature)
+		results = db.GqlQuery("SELECT * FROM Bug WHERE signHash = :1", self.signHash)
 		bug = results.get()
 		if bug:
 			logging.debug("Found existing bug")
@@ -70,7 +72,7 @@ class CrashReport(db.Model):
 				logging.debug("Same as old bug: %d" % oldbug.key().id())
 		else:
 			logging.debug("Created new bug")
-			nb = Bug(signature = self.crashSignature, count = 1, lastIncident = self.crashTime, linked = False, fixed = False)
+			nb = Bug(signature = self.crashSignature, signHash = self.signHash, count = 1, lastIncident = self.crashTime, linked = False, fixed = False, status = '', priority = '')
 			self.bugKey = nb.put()
 			logging.debug("Linked to bug, new count: " + str(self.bugKey.count))
 			self.put()
@@ -111,10 +113,19 @@ class CrashReport(db.Model):
 		return (tm.astimezone(pytz.utc), "")
 	@classmethod
 	def getCrashSignature(cls, body):
-		m = re.search(r".*<br>\s*(.*?com\.ichi2\.anki\..*?)<br>", body, re.M|re.U)
-		if m and m.groups():
-			return re.sub(r"\$[a-fA-F0-9@]*", "", m.group(1))
-		return ""
+		signLine1 = ''
+		signLine2 = ''
+		m1 = re.search(r"Begin Stacktrace\s*(<br>\s*)*([^<\s][^<]*[^<\s])\s*<br>", body, re.M|re.U)
+		if m1:
+			signLine1 = re.sub(r"\$[a-fA-F0-9@]*", "", m1.group(2))
+		m2 = re.search(r"<br>\s*(at\scom\.ichi2\.anki\.[^<]*[^<\s])\s*<br>", body, re.M|re.U)
+		if m2:
+			signLine2 = re.sub(r"\$[a-fA-F0-9@]*", "", m2.group(1))
+		return signLine1 + "\n" + signLine2
+		#m = re.search(r".*<br>\s*(.*?com\.ichi2\.anki\..*?)<br>", body, re.M|re.U)
+		#if m and m.groups():
+	#		return re.sub(r"\$[a-fA-F0-9@]*", "", m.group(1))
+		#return ""
 	@classmethod
 	def parseSimpleValue(cls, body, key, op=" = "):
 		pattern = r"<br>\s*" + key + op + r"(<a>)?(.*?)(</a>)?<br>"
@@ -147,9 +158,7 @@ class CrashReport(db.Model):
 			return (None, None, "", "crash_ts_" + hospital_reason)
 		else:
 			logging.debug("Crashed on: " + crash_ts.strftime(r"%d/%m/%Y %H:%M:%S %Z"))
-		signa = cls.getCrashSignature(body)
-		logging.debug("Signature: '" + signa + "'")
-		signature = signa
+		signature = cls.getCrashSignature(body)
 		if signature:
 			logging.debug("Signature: '" + signature + "'")
 		else:
@@ -163,6 +172,7 @@ class CrashReport(db.Model):
 		self.packageName = self.parseSimpleValue(self.report, "PackageName")
 		self.versionName = self.parseSimpleValue(self.report, "VersionName")
 		self.crashSignature = signature
+		self.signHash = hashlib.sha256(signature).hexdigest()
 		self.crashTime = crash_ts
 		self.sendTime = send_ts
 		self.brand = self.parseSimpleValue(self.report, "Brand")
@@ -195,12 +205,15 @@ class LogSenderHandler(InboundMailHandler):
 		if not body:
 			try:
 				body = mail_message.bodies('text/plain').next()[1]
-				logging.info("encoding... " + str(isinstance(body, EncodedPayload)))
-				if isinstance(body, EncodedPayload):
-					logging.info("fixing encoding... " + body.encoding)
-					if body.encoding == "8bit":
-						body.encoding = '7bit' 
-				body = body.decode()
+				#logging.info("encoding... " + str(isinstance(body, EncodedPayload)))
+
+				#if isinstance(body, EncodedPayload):
+				logging.info("message encoding... " + body.encoding)
+#				if body.encoding == "8bit":
+#					body.encoding = '7bit' 
+				logging.info("encoded: " + body)
+				body = body.decode(body.encoding)
+				logging.info("decoded: " + body)
 				body = escape(body)
 				body = re.sub(r"\n", "<br>", body)
 			except StopIteration:
@@ -231,7 +244,6 @@ class LogSenderHandler(InboundMailHandler):
 def main():
 	application = webapp.WSGIApplication([LogSenderHandler.mapping()], debug=True)
 	run_wsgi_app(application)
-	#wsgiref.handlers.CGIHandler().run(application)
 
 if __name__ == '__main__':
 	main()

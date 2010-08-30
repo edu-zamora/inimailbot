@@ -1,4 +1,4 @@
-import os, sys, logging, re
+import os, sys, logging, re, hashlib
 from urllib import quote_plus
 from string import strip
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
@@ -43,41 +43,38 @@ class AdminOps(webapp.RequestHandler):
 	def getCrashSignature2(cls, body):
 		result1 = ''
 		result2 = ''
-		m1 = re.search(r"Begin Stacktrace\s*(<br>\s*)*(\S.*?\S)\s*<br>", body, re.M)
+		m1 = re.search(r"Begin Stacktrace\s*(<br>\s*)*([^<\s][^<]*[^<\s])\s*<br>", body, re.M|re.U)
 		if m1 and m1.groups():# and m2 and m2.groups():
 			result1 = re.sub(r"\$[a-fA-F0-9@]*", "", m1.group(2))
-		m2 = re.search(r"<br>\s*(at\scom\.ichi2\.anki\..*?\S)\s*<br>", body, re.M|re.U)
+		m2 = re.search(r"<br>\s*(at\scom\.ichi2\.anki\.[^<]*[^<\s])\s*<br>", body, re.M|re.U)
+				           #"<br>\s*(at\scom\.ichi2\.anki\..*?\S)\s*<br>", body, re.M|re.U)
 		if m2 and m2.groups():# and m2 and m2.groups():
 			result2 = re.sub(r"\$[a-fA-F0-9@]*", "", m2.group(1))
-		return result1 + "-" + result2
+		return result1 + "\n" + result2
 	def get(self):
 
-		crashes_query = HospitalizedReport.all()
-		crashes = []
-		crashes_query.filter('diagnosis =', 'crash_time_missing')
-		total_results = crashes_query.count(1000000)
+		#bugs_query = Bug.all()
+		#bugs = []
+		#bugs = bugs_query.fetch(200)
+		#for bg in bugs:
+		#	bg.delete()
 
+		crashes_query = CrashReport.all()
+		crashes = []
+		total_results = crashes_query.count(1000000)
 		crashes = crashes_query.fetch(200)
 		results_list=[]
 		tags=set()
 		for cr in crashes:
-			new_report = re.sub('-->', '--&gt;', cr.crashBody)
-			new_report = re.sub('<--', '&lt;--', new_report)
-			new_report = re.sub('BEGIN REPORT 1 R', 'BEGIN REPORT 1 &lt;--<br> R', new_report)
-		#	m = re.search(r'^(.*--\&gt; END REPORT \d \&lt;--).*$', cr.crashBody, re.S)
-		#	new_report = ''
-		#	if m:
-		#		new_report = m.group(1)
-		#	else:
-		#		new_report = cr.crashBody
-		#	new_report = re.sub(r'<(?!br/?>)[^>]+>', '', new_report)
-		#	for mt in re.finditer(r'<[^>]+>', cr.crashBody, re.S):
-		#		if mt.group(0) not in tags:
-		#			tags.add(mt.group(0))
-			cr.crashBody = new_report
-			cr.put()
-			results_list.append({'id': cr.key().id(), 'sig1': cr.crashBody, 'sig2': new_report})
-			#results_list.append({'id': cr.key().id(), 'sig1': CrashReport.getCrashSignature(cr.report), 'sig2': self.getCrashSignature2(cr.report)})
+			#signa = CrashReport.getCrashSignature(cr.report)
+			#logging.debug("ID: " + str(cr.key().id()) + " sign: '" + signa + "'")
+			#cr.crashSignature = CrashReport.getCrashSignature(cr.report)
+			#cr.signHash = hashlib.sha256(cr.crashSignature).hexdigest()
+			#cr.bugKey = None
+			#cr.put()
+			#cr.linkToBug()
+			#if CrashReport.getCrashSignature(cr.report) != self.getCrashSignature2(cr.report):
+			#	results_list.append({'id': cr.key().id(), 'sig1': cr.bugKey.key().id(), 'sig2': cr.crashSignature})
 		template_values = {'results_list': results_list, 'tags': tags}
 		path = os.path.join(os.path.dirname(__file__), 'templates/admin_ops.html')
 		self.response.out.write(template.render(path, template_values))

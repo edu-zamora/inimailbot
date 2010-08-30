@@ -29,7 +29,11 @@
 				<span class="scanned">Scanned but not confirmed:</span>
 					{% endif %}
 				{% endif %}
+				{% if single_result %}
+				<input type="text" id="issue_input" size="5" name="issue" value="{{ bg.issueName|default_if_none:single_result }}" />
+				{% else %}
 				<input type="text" id="issue_input" size="5" name="issue" value="{{ bg.issueName|default_if_none:"" }}" />
+				{% endif %}
 				{% if issues %}
 				<select name="issue_list" onchange="document.getElementById('issue_input').value = this.options[this.selectedIndex].value;">
 					{% for iss in issues %}
