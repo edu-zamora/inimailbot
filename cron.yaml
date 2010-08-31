@@ -1,0 +1,4 @@
+cron:
+- description: hourly update of statuses and priorities
+  url: /ankidroid_triage/cron_hourly_update
+  schedule: every 5 minutes synchronized

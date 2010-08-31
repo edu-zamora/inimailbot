@@ -17,13 +17,19 @@ handlers:
 
 - url: /_ah/mail/ankidroid_crash_reports@inimailbot\.appspotmail\.com.*
   script: receive_ankicrashes.py
+  login: admin
 
 - url: /ankidroid_triage/admin_.*
   script: admin_ops.py
   login: admin
 
+- url: /ankidroid_triage/cron_hourly_update.*
+  script: cron_hourly.py
+  login: admin
+
 - url: /ankidroid_triage.*
   script: report_ankicrashes.py
+
 
 inbound_services:
 - mail
