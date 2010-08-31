@@ -83,6 +83,7 @@ class AdminOps(webapp.RequestHandler):
 		results_list=[]
 		tags=set()
 		for cr in crashes:
+			pass
 			#signa = CrashReport.getCrashSignature(cr.report)
 			#logging.debug("ID: " + str(cr.key().id()) + " sign: '" + signa + "'")
 			#cr.crashSignature = CrashReport.getCrashSignature(cr.report)
