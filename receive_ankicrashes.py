@@ -25,9 +25,11 @@ from google.appengine.ext.webapp.mail_handlers import InboundMailHandler
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext import db
 from google.appengine.api.urlfetch import fetch
+from google.appengine.api.urlfetch import Error
 
 from pytz.gae import pytz
 from pytz import timezone, UnknownTimeZoneError
+from BeautifulSoup import BeautifulStoneSoup
 
 class HospitalizedReport(db.Model):
 	email = db.StringProperty(required=True)
@@ -48,12 +50,25 @@ class Bug(db.Model):
 	priority = db.StringProperty()
 	def updateStatusPriority(self):
 		url = r"http://code.google.com/feeds/issues/p/ankidroid/issues/full?id=" + str(self.issueName)
-		#r"http://code.google.com/p/ankidroid/issues/list?can=1&q=" + urlEncodedSignature + r"&colspec=ID+Status+Priority"
-		result = fetch(url)
-		if result.status_code == 200:
-			logging.debug("Results retrieved (" + str(len(result.content)) + "): '" + quote(str(result.content)) + "'")
-			soup = BeautifulStoneSoup(result.content)
-
+		updated = False
+		try:
+			result = fetch(url)
+			if result.status_code == 200:
+				soup = BeautifulStoneSoup(result.content)
+				status = soup.find('issues:status')
+				if status:
+					self.status = unicode(status.string)
+					updated = True
+					logging.debug("Setting status to '" + self.status + "'")
+				priority = soup.find(name='issues:label', text=re.compile(r"^Priority-.+$"))
+				if priority:
+					self.priority = re.search("^Priority-(.+)$", unicode(priority.string)).group(1)
+					updated = True
+					logging.debug("Setting priority to '" + self.priority + "'")
+		except Error, e:
+			logging.error("Error while retrieving status and priority: %s" % str(e))
+		return updated
+			
 class CrashReport(db.Model):
 	email = db.EmailProperty(required=True)
 	crashId = db.StringProperty(required=True)
@@ -269,7 +284,11 @@ class LogSenderHandler(InboundMailHandler):
 					processed=False)
 			hr.put()
 		else:
-			cr.linkToBug()
+			# check for duplicates
+			crashes_query = CrashReport.all()
+			crashes_query.filter("crashId =", cr.crashId)
+			if not crashes_query.count(1):
+				cr.linkToBug()
 
 def main():
 	application = webapp.WSGIApplication([LogSenderHandler.mapping()], debug=True)

@@ -15,7 +15,7 @@
 # If not, see http://www.gnu.org/licenses/.
 # #####
 
-import os, sys, logging, re
+import os, logging, re
 from urllib import quote_plus
 from string import strip
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
@@ -37,9 +37,6 @@ from receive_ankicrashes import HospitalizedReport
 from receive_ankicrashes import Bug
 from BeautifulSoup import BeautifulSoup
 
-# Remove the standard version of Django
-#for k in [k for k in sys.modules if k.startswith('django')]:
-#    del sys.modules[k] 
 webapp.template.register_template_library('templatetags.basic_math')
 
 class MainPage(webapp.RequestHandler):
@@ -93,13 +90,13 @@ class ViewBug(webapp.RequestHandler):
 				logging.debug("Issue found: " + str(issueID) + " " + str(issueStatus) + " " + str(issuePriority))
 				issues = []
 				for i, issue in enumerate(issueID):
-					issues.append({'id': long(issueID[i].a.string), 'status':	strip(issueStatus[i].a.string), 'priority': strip(issuePriority[i].a.string)})
+					issues.append({'id': long(unicode(issueID[i].a.string)), 'status':	strip(unicode(issueStatus[i].a.string)), 'priority': strip(unicode(issuePriority[i].a.string))})
 				logging.info("Unsorted list: " + str(issues))
 				issues.sort(ViewBug.compareIssues)
 				logging.info("Sorted list: " + str(issues))
 				return issues
 		except Error, e:
-			logging.error("Error while retrieving query results: %s" % str(e))
+			logging.error("Error while querying for matching issues: %s" % str(e))
 			return []
 
 	def post(self):

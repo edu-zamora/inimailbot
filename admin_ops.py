@@ -92,7 +92,7 @@ class AdminOps(webapp.RequestHandler):
 			#cr.put()
 			#cr.linkToBug()
 			#if CrashReport.getCrashSignature(cr.report) != self.getCrashSignature2(cr.report):
-			#	results_list.append({'id': cr.key().id(), 'sig1': cr.bugKey.key().id(), 'sig2': cr.crashSignature})
+			results_list.append({'id': cr.key().id(), 'sig1': cr.crashId, 'sig2': ''})
 		template_values = {'results_list': results_list, 'tags': tags}
 		path = os.path.join(os.path.dirname(__file__), 'templates/admin_ops.html')
 		self.response.out.write(template.render(path, template_values))
