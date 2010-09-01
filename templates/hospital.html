@@ -74,7 +74,7 @@
 						<td><div class="scrollable">{{ hr.crashBody|safe }}</div></td>
 						<td>{{ hr.diagnosis }}</td>
 						<td>
-							{% if cr.processed %}
+							{% if hr.processed %}
 							<div class="fix_success">FIXED!</div>
 							{% else %}
 							<input type="submit" name="fix_report" value="Re-parse" onclick="document.getElementById('crash_id_var').value='{{ hr.key.id }}';">
