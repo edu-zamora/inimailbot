@@ -35,8 +35,8 @@
 		<br/>
 		<br/>
 		<br>
-		{% if hospitalized|gt:0 %}
-		<div id="hospital">There {{ hospitalized|pluralize:"is,are" }} currently <b>{{ hospitalized }}</b> crash report{{ hospitalized|pluralize }} in <a href="/ankidroid_triage/hospital">hospital</a> awaiting treatment</div>
+		{% if total_hospital|gt:0 %}
+		<div id="hospital">There {{ total_hospital|pluralize:"is,are" }} currently <b>{{ total_hospital }}</b> crash report{{ total_hospital|pluralize }} (<b>{{ sick_hospital }} awaiting treatment</b>) in <a href="/ankidroid_triage/hospital">hospital</a></div>
 		<br>
 		{% endif %}
 

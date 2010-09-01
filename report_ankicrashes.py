@@ -175,16 +175,11 @@ class ReportBugs(webapp.RequestHandler):
 
 class ReportCrashes(webapp.RequestHandler):
 	def get(self):
-		# Remove successfully processed hospitalized reports
 		hospital_query = HospitalizedReport.all()
-		hospital_query.filter('processed =', True)
-		hr_list = hospital_query.fetch(1000)
-		for hr in hr_list:
-			if not hr.diagnosis:
-				logging.info("Deleting hospitalized report: " + str(hr.key().id()))
-				hr.delete()
+		total_hospital = hospital_query.count()
 		hospital_query = HospitalizedReport.all()
-		hospitalized = hospital_query.count()
+		hospital_query.filter('processed =', False)
+		sick_hospital = hospital_query.count()
 
 		crashes_query = CrashReport.all()
 		bugId = self.request.get('bug_id')
@@ -207,23 +202,35 @@ class ReportCrashes(webapp.RequestHandler):
 				'page': page,
 				'last_page': last_page,
 				'bug_id': bugId,
-				'hospitalized': hospitalized}
+				'total_hospital': total_hospital,
+				'sick_hospital': sick_hospital}
 		path = os.path.join(os.path.dirname(__file__), 'templates/crash_list.html')
 		self.response.out.write(template.render(path, template_values))
 
 class ViewHospital(webapp.RequestHandler):
 	def post(self):
+		post_args = self.request.arguments()
 		page = self.request.get('page', 0)
-		attemped_fix_id = self.request.get('crash_id', 0)
-		hr = HospitalizedReport.get_by_id(long(attemped_fix_id))
-		if hr and not hr.processed:
-			cr = CrashReport(email = hr.email, crashId = hr.crashId, report = hr.crashBody)
-			hr.diagnosis = cr.parseReport()
-			if not hr.diagnosis:
-				hr.processed = True
-				cr.put()
-				cr.linkToBug()
-			hr.put()
+		if "remove_processed" in post_args:
+			# Remove successfully processed hospitalized reports
+			hospital_query = HospitalizedReport.all()
+			hospital_query.filter('processed =', True)
+			hr_list = hospital_query.fetch(1000000)
+			for hr in hr_list:
+				if not hr.diagnosis:
+					logging.info("Deleting hospitalized report: " + str(hr.key().id()))
+					hr.delete()
+		elif "fix_report" in post_args:
+			attemped_fix_id = self.request.get('crash_id', 0)
+			hr = HospitalizedReport.get_by_id(long(attemped_fix_id))
+			if hr and not hr.processed:
+				cr = CrashReport(email = hr.email, crashId = hr.crashId, report = hr.crashBody)
+				hr.diagnosis = cr.parseReport()
+				if not hr.diagnosis:
+					hr.processed = True
+					cr.put()
+					cr.linkToBug()
+				hr.put()
 		self.redirect(r'hospital?page=' + page)
 
 	def get(self):

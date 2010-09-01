@@ -36,26 +36,30 @@
 		<br/>
 		<br/>
 
-		<div class="above_table">
-			<div class="float_left">
-			{% if last_page|gt:0 %}
-				{% if page|gt:0 %}
-				<a href="hospital?page=0">&lt;&lt; First {{ page_size }}</a>
-				&nbsp;
-				<a href="hospital?page={{ page|sub:1 }}">&lt; Previous {{ page_size }}</a>
-				{% endif %}
-				{% if page|lt:last_page %}
-				<a href="hospital?page={{ page|add:1 }}">Next {{ page_size }} &gt;</a>
-				&nbsp;
-				<a href="hospital?page={{ last_page }}">Last {{ total_results|sub:1|mod:page_size|add:1 }} &gt;&gt;</a>
-				{% endif %}
-			{% endif %}
-			</div>
-			<div class="float_right">Total found: {{ total_results }}</div>
-		</div>
-		<br/>
-
 		<form name="fix_report" method="post" action="hospital">
+			<div class="above_table">
+				<div class="float_left">
+				{% if last_page|gt:0 %}
+					{% if page|gt:0 %}
+					<a href="hospital?page=0">&lt;&lt; First {{ page_size }}</a>
+					&nbsp;
+					<a href="hospital?page={{ page|sub:1 }}">&lt; Previous {{ page_size }}</a>
+					{% endif %}
+					{% if page|lt:last_page %}
+					<a href="hospital?page={{ page|add:1 }}">Next {{ page_size }} &gt;</a>
+					&nbsp;
+					<a href="hospital?page={{ last_page }}">Last {{ total_results|sub:1|mod:page_size|add:1 }} &gt;&gt;</a>
+					{% endif %}
+				{% endif %}
+				</div>
+				<div class="float_right">
+					Total found: {{ total_results }}
+					&nbsp;
+					<input type="submit" name="remove_processed" value="Remove fixed">
+				</div>
+			</div>
+			<br/>
+
 			<input type="hidden" id="crash_id_var" name="crash_id" value="">
 			<input type="hidden" name="page" value="{{ page }}">
 			<table>
