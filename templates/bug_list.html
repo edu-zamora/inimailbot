@@ -71,7 +71,7 @@
 					<td>{{ bg.signature }}</td>
 					<td>{{ bg.lastIncident|date:"Y-m-d H:i:s T" }}</td>
 					<td><a href="/ankidroid_triage/report_crashes?bug_id={{ bg.key.id }}">{{ bg.count }}</a></td>
-						<td>{% if bg.issueName %}<a href="http://code.google.com/p/ankidroid/issues/detail?id={{ bg.issueName }}">{{ bg.issueName }}</a>{% endif %}</td>
+					<td>{% if bg.issueName %}<a href="http://code.google.com/p/ankidroid/issues/detail?id={{ bg.issueName }}">{{ bg.issueName }}{% if not bg.linked %} *{% endif %}</a>{% endif %}</td>
 					<td>{{ bg.status }}</td>
 				</tr>
 				{% endfor %}

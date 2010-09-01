@@ -18,7 +18,9 @@
 import logging, email, re, hashlib
 from datetime import datetime
 from cgi import escape
+from string import strip
 from urllib import quote
+from urllib import quote_plus
 from google.appengine.api import mail
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.mail_handlers import InboundMailHandler
@@ -30,6 +32,7 @@ from google.appengine.api.urlfetch import Error
 from pytz.gae import pytz
 from pytz import timezone, UnknownTimeZoneError
 from BeautifulSoup import BeautifulStoneSoup
+from BeautifulSoup import BeautifulSoup
 
 class HospitalizedReport(db.Model):
 	email = db.StringProperty(required=True)
@@ -39,6 +42,31 @@ class HospitalizedReport(db.Model):
 	processed = db.BooleanProperty()
 
 class Bug(db.Model):
+	issueStatusOrder = {
+			'Started': 0,
+			'Accepted': 0,
+			'New': 0,
+			'FixedInDev': 1,
+			'Fixed': 2,
+			'Done': 2,
+			'Invalid': 3,
+			'WontFix': 3,
+			'Duplicate': 4
+			}
+	issuePriorityOrder = {
+			'Critical': 0,
+			'High': 1,
+			'Medium': 2,
+			'Low': 3
+			}
+	@classmethod
+	def compareIssues(cls, a, b):
+		# First prioritize on Status, then on priority, then on -ID
+		logging.info("Comparing " + str(a) + " " + str(b))
+		logging.info("Comparing status: " + str(cls.issueStatusOrder[a['status']]) + " " + str(cls.issueStatusOrder[b['status']]) + " " + str(cmp(cls.issueStatusOrder[a['status']], cls.issueStatusOrder[b['status']])))
+		logging.info("Comparing priority: " + str(cls.issuePriorityOrder[a['priority']]) + " " + str(cls.issuePriorityOrder[b['priority']]) + " " + str(cmp(cls.issuePriorityOrder[a['priority']], cls.issuePriorityOrder[b['priority']])))
+		logging.info("Comparing ID: " + str(cmp(-a['id'], -b['id'])))
+		return cmp(cls.issueStatusOrder[a['status']], cls.issueStatusOrder[b['status']]) or cmp(cls.issuePriorityOrder[a['priority']], cls.issuePriorityOrder[b['priority']]) or cmp(-a['id'], -b['id'])
 	signature = db.TextProperty(required=True)
 	signHash = db.StringProperty()
 	count = db.IntegerProperty(required=True)
@@ -68,6 +96,30 @@ class Bug(db.Model):
 		except Error, e:
 			logging.error("Error while retrieving status and priority: %s" % str(e))
 		return updated
+	def findIssue(self):
+		# format signature for google query
+		urlEncodedSignature = re.sub(r'([:=])(\S)', r'\1 \2', self.signature)
+		urlEncodedSignature = quote_plus(urlEncodedSignature)
+		logging.debug("findIssue: URL-Encoded: '" + urlEncodedSignature + "'")
+		url = r"http://code.google.com/p/ankidroid/issues/list?can=1&q=" + urlEncodedSignature + r"&colspec=ID+Status+Priority"
+		try:
+			result = fetch(url)
+			if result.status_code == 200:
+				#logging.debug("Results retrieved (" + str(len(result.content)) + "): '" + str(result.content) + "'")
+				soup = BeautifulSoup(result.content)
+				issueID = soup.findAll('td', {'class': 'vt id col_0'})
+				issueStatus = soup.findAll('td', {'class': 'vt col_1'})
+				issuePriority = soup.findAll('td', {'class': 'vt col_2'})
+				logging.debug("findIssue: Issue found: " + str(issueID) + " " + str(issueStatus) + " " + str(issuePriority))
+				issues = []
+				for i, issue in enumerate(issueID):
+					issues.append({'id': long(unicode(issueID[i].a.string)), 'status':	strip(unicode(issueStatus[i].a.string)), 'priority': strip(unicode(issuePriority[i].a.string))})
+				issues.sort(Bug.compareIssues)
+				logging.debug("findIssue: sorted results list: " + str(issues))
+				return issues
+		except Error, e:
+			logging.error("findIssue: Error while querying for matching issues: %s" % str(e))
+			return []
 			
 class CrashReport(db.Model):
 	email = db.EmailProperty(required=True)

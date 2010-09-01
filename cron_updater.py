@@ -22,10 +22,24 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 
 from receive_ankicrashes import Bug
 
+class ScanIssues(webapp.RequestHandler):
+	def get(self):
+		bugs_query = Bug.all()
+		bugs_query.filter('linked =', False)
+		bugs = []
+		bugs = bugs_query.fetch(1000)
+		for bg in bugs:
+			issues = bg.findIssue()
+			if issues:
+				bg.issueName = issues[0]['id']
+				logging.info("ScanIssues: Autolinking bug " + str(bg.key().id()) + " to issue " + str(bg.issueName))
+				bg.put()
+
 class UpdateStatusesPriorities(webapp.RequestHandler):
 	def get(self):
 		bugs_query = Bug.all()
-		bugs_query.filter('issueName !=', None)
+		#bugs_query.filter('issueName !=', None)
+		bugs_query.filter('linked =', True)
 		bugs = []
 		bugs = bugs_query.fetch(1000)
 		logging.debug("Cron job updater, found " + str(bugs_query.count(1000000)) + " bugs")
@@ -35,7 +49,8 @@ class UpdateStatusesPriorities(webapp.RequestHandler):
 				bg.put()
 		
 application = webapp.WSGIApplication(
-		[(r'^/ankidroid_triage/cron_hourly_update/?.*', UpdateStatusesPriorities)],
+		[(r'^/ankidroid_triage/cron_updater/status_priority?.*', UpdateStatusesPriorities),
+		(r'^/ankidroid_triage/cron_updater/issue_scanner?.*', ScanIssues)],
 		debug=True)
 
 def main():

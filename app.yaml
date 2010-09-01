@@ -23,8 +23,8 @@ handlers:
   script: admin_ops.py
   login: admin
 
-- url: /ankidroid_triage/cron_hourly_update.*
-  script: cron_hourly.py
+- url: /ankidroid_triage/cron_updater.*
+  script: cron_updater.py
   login: admin
 
 - url: /ankidroid_triage.*

@@ -16,8 +16,6 @@
 # #####
 
 import os, logging, re
-from urllib import quote_plus
-from string import strip
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from google.appengine.dist import use_library
@@ -35,7 +33,6 @@ from google.appengine.api.urlfetch import Error
 from receive_ankicrashes import CrashReport
 from receive_ankicrashes import HospitalizedReport
 from receive_ankicrashes import Bug
-from BeautifulSoup import BeautifulSoup
 
 webapp.template.register_template_library('templatetags.basic_math')
 
@@ -46,59 +43,6 @@ class MainPage(webapp.RequestHandler):
 #		self.response.out.write('Hello world!')
 
 class ViewBug(webapp.RequestHandler):
-	issueStatusOrder = {
-			'Started': 0,
-			'Accepted': 0,
-			'New': 0,
-			'FixedInDev': 1,
-			'Fixed': 2,
-			'Done': 2,
-			'Invalid': 3,
-			'WontFix': 3,
-			'Duplicate': 4
-			}
-	issuePriorityOrder = {
-			'Critical': 0,
-			'High': 1,
-			'Medium': 2,
-			'Low': 3
-			}
-
-	@classmethod
-	def compareIssues(cls, a, b):
-		# First prioritize on Status, then on priority, then on -ID
-		logging.info("Comparing " + str(a) + " " + str(b))
-		logging.info("Comparing status: " + str(cls.issueStatusOrder[a['status']]) + " " + str(cls.issueStatusOrder[b['status']]) + " " + str(cmp(cls.issueStatusOrder[a['status']], cls.issueStatusOrder[b['status']])))
-		logging.info("Comparing priority: " + str(cls.issuePriorityOrder[a['priority']]) + " " + str(cls.issuePriorityOrder[b['priority']]) + " " + str(cmp(cls.issuePriorityOrder[a['priority']], cls.issuePriorityOrder[b['priority']])))
-		logging.info("Comparing ID: " + str(cmp(-a['id'], -b['id'])))
-		return cmp(cls.issueStatusOrder[a['status']], cls.issueStatusOrder[b['status']]) or cmp(cls.issuePriorityOrder[a['priority']], cls.issuePriorityOrder[b['priority']]) or cmp(-a['id'], -b['id'])
-
-	def findIssue(self, signature):
-		# format signature for google query
-		urlEncodedSignature = re.sub(r'([:=])(\S)', r'\1 \2', signature)
-		urlEncodedSignature = quote_plus(urlEncodedSignature)
-		logging.info("URL-Encoded: '" + urlEncodedSignature + "'")
-		url = r"http://code.google.com/p/ankidroid/issues/list?can=1&q=" + urlEncodedSignature + r"&colspec=ID+Status+Priority"
-		try:
-			result = fetch(url)
-			if result.status_code == 200:
-				logging.debug("Results retrieved (" + str(len(result.content)) + "): '" + str(result.content) + "'")
-				soup = BeautifulSoup(result.content)
-				issueID = soup.findAll('td', {'class': 'vt id col_0'})
-				issueStatus = soup.findAll('td', {'class': 'vt col_1'})
-				issuePriority = soup.findAll('td', {'class': 'vt col_2'})
-				logging.debug("Issue found: " + str(issueID) + " " + str(issueStatus) + " " + str(issuePriority))
-				issues = []
-				for i, issue in enumerate(issueID):
-					issues.append({'id': long(unicode(issueID[i].a.string)), 'status':	strip(unicode(issueStatus[i].a.string)), 'priority': strip(unicode(issuePriority[i].a.string))})
-				logging.info("Unsorted list: " + str(issues))
-				issues.sort(ViewBug.compareIssues)
-				logging.info("Sorted list: " + str(issues))
-				return issues
-		except Error, e:
-			logging.error("Error while querying for matching issues: %s" % str(e))
-			return []
-
 	def post(self):
 		post_args = self.request.arguments()
 		bugId = self.request.get('bug_id')
@@ -107,7 +51,7 @@ class ViewBug(webapp.RequestHandler):
 		if bug:
 			if "find_issue" in post_args:
 				# Scan for matching issue
-				issues = self.findIssue(bug.signature)
+				issues = bug.findIssue()
 			elif "save_issue" in post_args:
 				# Save the entered issue
 				issueName = self.request.get('issue')
@@ -115,11 +59,13 @@ class ViewBug(webapp.RequestHandler):
 					if issueName:
 						bug.issueName = long(issueName)
 						bug.linked = True
+						bug.updateStatusPriority()
 					else:
 						bug.issueName = None
 						bug.linked = False
+						bug.status = ''
+						bug.priority = ''
 					bug.fixed = False
-					bug.updateStatusPriority()
 					bug.put()
 					logging.debug("Saving issue - value: '" + issueName + "'")
 				else:
