@@ -142,6 +142,7 @@ class CrashReport(db.Model):
 			newtzname = re.sub(r"^(PDT)$", r"PST8\1", newtzname)
 			newtzname = re.sub(r"^JST$", r"Japan", newtzname)
 			newtzname = re.sub(r"^CEST$", r"CET", newtzname)
+			newtzname = re.sub(r"^MESZ$", r"Europe/Berlin", newtzname)
 			logging.debug("Changed timezone from '" + tzname + "' to '" + newtzname + "'")
 			try:
 				tz = timezone(newtzname)
