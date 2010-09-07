@@ -321,6 +321,8 @@ class LogSenderHandler(InboundMailHandler):
 		body = re.sub(r"<p>", "", body)
 		body = re.sub(r"</p>", "<br>", body)
 		body = re.sub(r"<br\s*/>", "<br>", body, re.U)
+		# Escape the report BEGIN/END marks so they are not killed as tags
+		body =e.sub(r"-->\s*((BEGIN)|(END))\s+REPORT\s*<--", r"--&gt; \1 REPORT &lt;--", body, re.U)
 		# Remove anything following the END of REPORT (like personal email signatures)
 		m = re.search(r'^(.*--\&gt; END REPORT \d \&lt;--).*$', body, re.S)
 		if m:
@@ -346,7 +348,7 @@ class LogSenderHandler(InboundMailHandler):
 				cr.linkToBug()
 			else:
 				dupl = dupl_query.fetch(1)[0]
-				logging.w("found duplicate with id: " + str(dupl.key().id()))
+				logging.warning("Found duplicate with id: " + str(dupl.key().id()))
 
 def main():
 	application = webapp.WSGIApplication([LogSenderHandler.mapping()], debug=True)
