@@ -77,12 +77,13 @@ class AdminOps(webapp.RequestHandler):
 		#	bg.delete()
 
 		crashes_query = CrashReport.all()
+		crashes_query.filter("bugKey =", None)
 		crashes = []
-		total_results = crashes_query.count(1000000)
 		crashes = crashes_query.fetch(200)
 		results_list=[]
 		tags=set()
 		for cr in crashes:
+			#cr.linkToBug()
 			pass
 			#signa = CrashReport.getCrashSignature(cr.report)
 			#logging.debug("ID: " + str(cr.key().id()) + " sign: '" + signa + "'")
@@ -92,7 +93,7 @@ class AdminOps(webapp.RequestHandler):
 			#cr.put()
 			#cr.linkToBug()
 			#if CrashReport.getCrashSignature(cr.report) != self.getCrashSignature2(cr.report):
-			results_list.append({'id': cr.key().id(), 'sig1': cr.crashId, 'sig2': ''})
+			results_list.append({'id': cr.key().id(), 'sig1': cr.crashId, 'sig2': str(cr.key().id())})
 		template_values = {'results_list': results_list, 'tags': tags}
 		path = os.path.join(os.path.dirname(__file__), 'templates/admin_ops.html')
 		self.response.out.write(template.render(path, template_values))

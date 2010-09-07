@@ -120,7 +120,7 @@ class Bug(db.Model):
 		except Error, e:
 			logging.error("findIssue: Error while querying for matching issues: %s" % str(e))
 			return []
-			
+
 class CrashReport(db.Model):
 	email = db.EmailProperty(required=True)
 	crashId = db.StringProperty(required=True)
@@ -219,7 +219,7 @@ class CrashReport(db.Model):
 		if m2:
 			signLine2 = re.sub(r"\$[a-fA-F0-9@]*", "", m2.group(1))
 		return signLine1 + "\n" + signLine2
-		#m = re.search(r".*<br>\s*(.*?com\.ichi2\.anki\..*?)<br>", body, re.M|re.U)
+	#m = re.search(r".*<br>\s*(.*?com\.ichi2\.anki\..*?)<br>", body, re.M|re.U)
 		#if m and m.groups():
 	#		return re.sub(r"\$[a-fA-F0-9@]*", "", m.group(1))
 		#return ""
@@ -287,7 +287,7 @@ class CrashReport(db.Model):
 		self.linked = False
 		self.bugId = 0
 		self.issueLink = None
-		self.put()
+		#self.put()
 		return ""
 
 class LogSenderHandler(InboundMailHandler):
@@ -305,14 +305,15 @@ class LogSenderHandler(InboundMailHandler):
 				#logging.info("encoding... " + str(isinstance(body, EncodedPayload)))
 
 				#if isinstance(body, EncodedPayload):
-				logging.info("message encoding... " + body.encoding)
+				logging.debug("Message encoding: " + body.encoding + " type: " + str(type(body)) + " type: " + str(type(body.payload)))
 #				if body.encoding == "8bit":
 #					body.encoding = '7bit' 
-				logging.info("encoded: " + body)
-				body = body.decode(body.encoding)
-				logging.info("decoded: " + body)
+				#logging.info("encoded: " + body)
+				body = body.decode()
+				logging.debug("Message decoded: '" + body + "'")
 				body = escape(body)
 				body = re.sub(r"\n", "<br>", body)
+				logging.debug("Message escaped: '" + body + "'")
 			except StopIteration:
 				logging.warning("Rejecting message: Can't retrieve even text/plain body of mail")
 				raise
@@ -338,10 +339,14 @@ class LogSenderHandler(InboundMailHandler):
 			hr.put()
 		else:
 			# check for duplicates
-			crashes_query = CrashReport.all()
-			crashes_query.filter("crashId =", cr.crashId)
-			if not crashes_query.count(1):
+			dupl_query = CrashReport.all()
+			dupl_query.filter("crashId =", cr.crashId)
+			if dupl_query.count(1) == 0:
+				cr.put()
 				cr.linkToBug()
+			else:
+				dupl = dupl_query.fetch(1)[0]
+				logging.w("found duplicate with id: " + str(dupl.key().id()))
 
 def main():
 	application = webapp.WSGIApplication([LogSenderHandler.mapping()], debug=True)
