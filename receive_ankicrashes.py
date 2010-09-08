@@ -62,10 +62,10 @@ class Bug(db.Model):
 	@classmethod
 	def compareIssues(cls, a, b):
 		# First prioritize on Status, then on priority, then on -ID
-		logging.info("Comparing " + str(a) + " " + str(b))
-		logging.info("Comparing status: " + str(cls.issueStatusOrder[a['status']]) + " " + str(cls.issueStatusOrder[b['status']]) + " " + str(cmp(cls.issueStatusOrder[a['status']], cls.issueStatusOrder[b['status']])))
-		logging.info("Comparing priority: " + str(cls.issuePriorityOrder[a['priority']]) + " " + str(cls.issuePriorityOrder[b['priority']]) + " " + str(cmp(cls.issuePriorityOrder[a['priority']], cls.issuePriorityOrder[b['priority']])))
-		logging.info("Comparing ID: " + str(cmp(-a['id'], -b['id'])))
+		#logging.info("Comparing " + str(a) + " " + str(b))
+		#logging.info("Comparing status: " + str(cls.issueStatusOrder[a['status']]) + " " + str(cls.issueStatusOrder[b['status']]) + " " + str(cmp(cls.issueStatusOrder[a['status']], cls.issueStatusOrder[b['status']])))
+		#logging.info("Comparing priority: " + str(cls.issuePriorityOrder[a['priority']]) + " " + str(cls.issuePriorityOrder[b['priority']]) + " " + str(cmp(cls.issuePriorityOrder[a['priority']], cls.issuePriorityOrder[b['priority']])))
+		#logging.info("Comparing ID: " + str(cmp(-a['id'], -b['id'])))
 		return cmp(cls.issueStatusOrder[a['status']], cls.issueStatusOrder[b['status']]) or cmp(cls.issuePriorityOrder[a['priority']], cls.issuePriorityOrder[b['priority']]) or cmp(-a['id'], -b['id'])
 	signature = db.TextProperty(required=True)
 	signHash = db.StringProperty()
@@ -305,7 +305,7 @@ class LogSenderHandler(InboundMailHandler):
 				#logging.info("encoding... " + str(isinstance(body, EncodedPayload)))
 
 				#if isinstance(body, EncodedPayload):
-				logging.debug("Message encoding: " + body.encoding + " type: " + str(type(body)) + " type: " + str(type(body.payload)))
+				logging.warning("Message encoding: " + body.encoding + " type: " + str(type(body)) + " type: " + str(type(body.payload)))
 #				if body.encoding == "8bit":
 #					body.encoding = '7bit' 
 				#logging.info("encoded: " + body)
@@ -315,7 +315,7 @@ class LogSenderHandler(InboundMailHandler):
 				body = re.sub(r"\n", "<br>", body)
 				logging.debug("Message escaped: '" + body + "'")
 			except StopIteration:
-				logging.warning("Rejecting message: Can't retrieve even text/plain body of mail")
+				logging.error("Rejecting message: Can't retrieve even text/plain body of mail")
 				raise
 		# Convert paragraphs to <br>
 		body = re.sub(r"<p>", "", body)
