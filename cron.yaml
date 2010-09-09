@@ -1,7 +1,7 @@
 cron:
 - description: update of statuses and priorities
   url: /ankidroid_triage/cron_updater/status_priority
-  schedule: every 31 minutes synchronized
+  schedule: every 36 minutes synchronized
 - description: autoscanning for issues
   url: /ankidroid_triage/cron_updater/issue_scanner
-  schedule: every 37 minutes synchronized
+  schedule: every 32 minutes synchronized
