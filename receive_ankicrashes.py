@@ -306,10 +306,11 @@ class LogSenderHandler(InboundMailHandler):
 
 				#if isinstance(body, EncodedPayload):
 				logging.warning("Message encoding: " + body.encoding + " type: " + str(type(body)) + " type: " + str(type(body.payload)))
-#				if body.encoding == "8bit":
-#					body.encoding = '7bit' 
-				#logging.info("encoded: " + body)
-				body = body.decode()
+				if body.encoding == '8bit':
+					body = body.payload
+					logging.warning("Un-decoded body: '" + body + "'")
+				else:
+					body = body.decode()
 				logging.debug("Message decoded: '" + body + "'")
 				body = escape(body)
 				body = re.sub(r"\n", "<br>", body)
