@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ###
 # Copyright (c) 2010 Konstantinos Spyropoulos <inigo.aldana@gmail.com>
 #
@@ -21,6 +22,8 @@ from cgi import escape
 from string import strip
 from urllib import quote
 from urllib import quote_plus
+from quopri import decodestring
+from email.header import decode_header
 from google.appengine.api import mail
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.mail_handlers import InboundMailHandler
@@ -172,9 +175,9 @@ class CrashReport(db.Model):
 			self.put()
 	@classmethod
 	def parseUTCDateTime(cls, dt_str):
-		m = re.match(r"(\w+ \w+ \d+ \d+:\d+:\d+ )(\S+)( \d+)",  dt_str)
+		m = re.match(r"(\w+ \w+ \d+ \d+:\d+:\d+ )(\S.*\S)( \d+)",  dt_str, re.U)
 		if m is None:
-			logging.warning("Datetime has unknown format: '" + dt_str + "'")
+			logging.warning("Datetime has unknown format: '" + dt_str + "' " + repr(dt_str))
 			return (None, "format_unknown")
 		try:
 			tm = datetime.strptime(m.group(1) + m.group(3), r"%a %b %d %H:%M:%S %Y")
@@ -194,7 +197,15 @@ class CrashReport(db.Model):
 			newtzname = re.sub(r"^(PDT)$", r"PST8\1", newtzname)
 			newtzname = re.sub(r"^JST$", r"Japan", newtzname)
 			newtzname = re.sub(r"^CEST$", r"CET", newtzname)
+			newtzname = re.sub(r"^HAEC$", r"CET", newtzname)
 			newtzname = re.sub(r"^MESZ$", r"Europe/Berlin", newtzname)
+			# See if timezone is Quoted-Printable UTF-8
+			logging.debug(str(ord(newtzname[0])) +' ' + str(ord(newtzname[1])) + ' ' + str(len(newtzname)) + ' ' + repr(newtzname))
+			if re.search('^[=A-Fa-f0-9 ]a$', newtzname):
+				logging.debug("Trying for Quoted-Printable UTF-8 string for timezone")
+				newtzname = decodestring(newtzname).decode('utf-8')
+			if newtzname == u'\u041c\u043e\u0441\u043a\u043e\u0432\u0441\u043a\u043e\u0435 \u043b\u0435\u0442\u043d\u0435\u0435 \u0432\u0440\u0435\u043c\u044f':
+				newtzname = "Europe/Moscow"
 			logging.debug("Changed timezone from '" + tzname + "' to '" + newtzname + "'")
 			try:
 				tz = timezone(newtzname)
@@ -235,11 +246,11 @@ class CrashReport(db.Model):
 		return ""
 	@classmethod
 	def getMessageEssentials(cls, subject, body):
-		m = re.search("^Bug Report on (.*)$", subject)
+		m = re.search("(\[[^\]]*\])?\s*Bug Report on (.*)$", subject)
 		if (m is None) or m.groups() is None:
 			logging.warning("Hospitalizing message: Unknown subject (" + subject + ")")
 			return (None, None, "", "unknown_subject")
-		(send_ts, hospital_reason) = cls.parseUTCDateTime(m.group(1))
+		(send_ts, hospital_reason) = cls.parseUTCDateTime(m.group(2))
 		if hospital_reason:
 			logging.warning("Hospitalizing message: Failed in parsing send time")
 			return (None, None, "", "send_ts_" + hospital_reason)
@@ -292,7 +303,17 @@ class CrashReport(db.Model):
 
 class LogSenderHandler(InboundMailHandler):
 	def receive(self, mail_message):
-		logging.info("Message from: " + mail_message.sender + " - Subject: " + mail_message.subject)
+		encoded_subject = decode_header(mail_message.subject)
+		subject = encoded_subject[0][0]
+		encoding = encoded_subject[0][1]
+		if encoding:
+			subject = subject.decode(encoding)
+			logging.debug("Decoded subject: '" + subject + "' encoding: '" + encoding)
+		if not isinstance(subject, unicode):
+			subject = unicode(subject)
+			logging.debug("Converted subject to unicode:: '" + subject + "'")
+		subject = re.sub('\n', '', subject)
+		logging.info("Message from: " + mail_message.sender + " - Subject: " + subject)
 		body = ''
 		try:
 			# Get the body, try the html version, if not found we convert the plain to html
@@ -302,9 +323,6 @@ class LogSenderHandler(InboundMailHandler):
 		if not body:
 			try:
 				body = mail_message.bodies('text/plain').next()[1]
-				#logging.info("encoding... " + str(isinstance(body, EncodedPayload)))
-
-				#if isinstance(body, EncodedPayload):
 				logging.warning("Message encoding: " + body.encoding + " type: " + str(type(body)) + " type: " + str(type(body.payload)))
 				if body.encoding == '8bit':
 					body = body.payload
@@ -330,12 +348,12 @@ class LogSenderHandler(InboundMailHandler):
 			body = m.group(1)
 		# Strip all tags except <br>
 		body = re.sub(r'<(?!br/?>)[^>]+>', '', body)
-		cr = CrashReport(email = mail_message.sender, crashId = mail_message.subject, report = body)
+		cr = CrashReport(email = mail_message.sender, crashId = subject, report = body)
 		hospital_reason = cr.parseReport()
 		if hospital_reason:
 			logging.info("Hospitalized body: '" + body)
 			hr = HospitalizedReport(email=mail_message.sender,
-					crashId=mail_message.subject,
+					crashId=subject,
 					crashBody=body,
 					diagnosis=hospital_reason,
 					processed=False)
